@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Cyberpunk Neon Theme */
+    --background: 220 25% 8%;
+    --foreground: 180 100% 95%;
+
+    --card: 220 25% 10%;
+    --card-foreground: 180 100% 95%;
+
+    --popover: 220 25% 12%;
+    --popover-foreground: 180 100% 95%;
+
+    --primary: 187 100% 50%;
+    --primary-foreground: 220 25% 8%;
+    --primary-glow: 187 100% 60%;
+
+    --secondary: 300 100% 50%;
+    --secondary-foreground: 220 25% 8%;
+    --secondary-glow: 300 100% 60%;
+
+    --accent: 130 100% 50%;
+    --accent-foreground: 220 25% 8%;
+    --accent-glow: 130 100% 60%;
+
+    --muted: 220 15% 20%;
+    --muted-foreground: 180 50% 60%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 220 25% 8%;
+
+    --border: 187 100% 50%;
+    --input: 220 25% 15%;
+    --ring: 187 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Neon Gradients */
+    --gradient-cyber: linear-gradient(135deg, hsl(187, 100%, 50%), hsl(300, 100%, 50%));
+    --gradient-glow: linear-gradient(180deg, hsl(220, 25%, 10%), hsl(220, 25%, 8%));
+    --gradient-card: linear-gradient(135deg, hsl(220, 25%, 12%) 0%, hsl(220, 25%, 10%) 100%);
+    
+    /* Shadows & Glows */
+    --shadow-neon: 0 0 20px hsl(187, 100%, 50% / 0.5), 0 0 40px hsl(187, 100%, 50% / 0.3);
+    --shadow-magenta: 0 0 20px hsl(300, 100%, 50% / 0.5), 0 0 40px hsl(300, 100%, 50% / 0.3);
+    --shadow-green: 0 0 20px hsl(130, 100%, 50% / 0.5), 0 0 40px hsl(130, 100%, 50% / 0.3);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-glow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    /* Same theme for consistency */
+    --background: 220 25% 8%;
+    --foreground: 180 100% 95%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground overflow-x-hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    font-weight: 700;
+  }
+}
+
+@layer components {
+  .neon-border {
+    border: 2px solid hsl(var(--primary));
+    box-shadow: var(--shadow-neon);
+  }
+
+  .neon-glow {
+    animation: neon-pulse 2s ease-in-out infinite;
+  }
+
+  .cyber-card {
+    background: var(--gradient-card);
+    border: 1px solid hsl(var(--primary) / 0.3);
+    transition: var(--transition-glow);
+  }
+
+  .cyber-card:hover {
+    border-color: hsl(var(--primary));
+    box-shadow: var(--shadow-neon);
+  }
+
+  .gradient-text {
+    background: var(--gradient-cyber);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@layer utilities {
+  @keyframes neon-pulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 5px hsl(var(--primary))) brightness(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 20px hsl(var(--primary))) brightness(1.2);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+}
