@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
-export const MicrophoneEmotionAnalyzer = () => {
+interface MicrophoneEmotionAnalyzerProps {
+  onEmotionChange?: (emotion: string | null) => void;
+}
+
+export const MicrophoneEmotionAnalyzer = ({ onEmotionChange }: MicrophoneEmotionAnalyzerProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [emotion, setEmotion] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
@@ -63,9 +67,13 @@ export const MicrophoneEmotionAnalyzer = () => {
     const emotions = ['calm', 'excited', 'confident', 'neutral', 'engaged'];
     const tones = ['steady', 'energetic', 'composed', 'dynamic'];
     
-    setEmotion(emotions[Math.floor(Math.random() * emotions.length)]);
+    const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+    setEmotion(newEmotion);
     setTone(tones[Math.floor(Math.random() * tones.length)]);
     setConfidence(Math.floor(Math.random() * 20) + 75);
+    
+    // Notify parent component
+    onEmotionChange?.(newEmotion);
   };
 
   return (

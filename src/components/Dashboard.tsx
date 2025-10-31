@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { EEGControlPanel } from './EEGControlPanel';
 import { MoodTracker } from './MoodTracker';
 import { VRExperience } from './VRExperience';
@@ -5,11 +6,26 @@ import { AIChat } from './AIChat';
 import { BrainGames } from './BrainGames';
 import { CameraEmotionAnalyzer } from './CameraEmotionAnalyzer';
 import { MicrophoneEmotionAnalyzer } from './MicrophoneEmotionAnalyzer';
+import { RobotAssistant } from './RobotAssistant';
 import { Video, Mic, MessageSquare, Headphones } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export const Dashboard = () => {
+  const [facialEmotion, setFacialEmotion] = useState('neutral');
+  const [voiceEmotion, setVoiceEmotion] = useState<string | null>(null);
+  const [engagement, setEngagement] = useState(0);
+  const [attention, setAttention] = useState(0);
+
+  const handleCameraEmotionChange = (emotion: string, eng: number, att: number) => {
+    setFacialEmotion(emotion);
+    setEngagement(eng);
+    setAttention(att);
+  };
+
+  const handleMicEmotionChange = (emotion: string | null) => {
+    setVoiceEmotion(emotion);
+  };
   return (
     <section id="dashboard" className="py-20 px-6">
       <div className="container mx-auto">
@@ -64,9 +80,15 @@ export const Dashboard = () => {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <CameraEmotionAnalyzer />
-          <MicrophoneEmotionAnalyzer />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <CameraEmotionAnalyzer onEmotionChange={handleCameraEmotionChange} />
+          <MicrophoneEmotionAnalyzer onEmotionChange={handleMicEmotionChange} />
+          <RobotAssistant 
+            facialEmotion={facialEmotion}
+            voiceEmotion={voiceEmotion}
+            engagement={engagement}
+            attention={attention}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

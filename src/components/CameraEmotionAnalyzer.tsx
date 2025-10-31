@@ -5,7 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 
-export const CameraEmotionAnalyzer = () => {
+interface CameraEmotionAnalyzerProps {
+  onEmotionChange?: (emotion: string, engagement: number, attention: number) => void;
+}
+
+export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzerProps) => {
   const [isActive, setIsActive] = useState(false);
   const [emotion, setEmotion] = useState('neutral');
   const [engagement, setEngagement] = useState(0);
@@ -59,9 +63,16 @@ export const CameraEmotionAnalyzer = () => {
     const emotions = ['focused', 'happy', 'neutral', 'engaged', 'curious'];
     const interval = setInterval(() => {
       if (streamRef.current) {
-        setEmotion(emotions[Math.floor(Math.random() * emotions.length)]);
-        setEngagement(Math.floor(Math.random() * 30) + 70);
-        setAttention(Math.floor(Math.random() * 20) + 80);
+        const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+        const newEngagement = Math.floor(Math.random() * 30) + 70;
+        const newAttention = Math.floor(Math.random() * 20) + 80;
+        
+        setEmotion(newEmotion);
+        setEngagement(newEngagement);
+        setAttention(newAttention);
+        
+        // Notify parent component
+        onEmotionChange?.(newEmotion, newEngagement, newAttention);
       }
     }, 3000);
 
