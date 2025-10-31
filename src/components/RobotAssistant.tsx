@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bot, Sparkles, Heart, Zap, Volume2, VolumeX } from 'lucide-react';
+import { Bot, Sparkles, Heart, Zap, Volume2, VolumeX, MessageCircle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useRobotConversation } from '@/hooks/useRobotConversation';
 
 interface RobotAssistantProps {
   facialEmotion: string;
@@ -56,8 +58,40 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
   const [isAnimating, setIsAnimating] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [userInput, setUserInput] = useState("");
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const { toast } = useToast();
+  const { chat, isProcessing } = useRobotConversation();
+
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || isProcessing) return;
+
+    const input = userInput;
+    setUserInput("");
+    
+    try {
+      const response = await chat(input, {
+        facialEmotion,
+        voiceEmotion,
+        engagement,
+        attention
+      });
+      
+      setMessage(response);
+      speak(response);
+      
+      // Trigger animation
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 500);
+    } catch (error) {
+      toast({
+        title: "Chat Error",
+        description: "Unable to process message",
+        variant: "destructive"
+      });
+    }
+  };
 
   const speak = (text: string) => {
     if (!voiceEnabled || !window.speechSynthesis) return;
@@ -203,8 +237,43 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className={`w-2 h-2 rounded-full ${robotMood === 'excited' ? 'bg-accent animate-pulse' : robotMood === 'encouraging' ? 'bg-secondary animate-pulse' : 'bg-primary'}`}></div>
             <span className="capitalize">
-              {isSpeaking ? 'Speaking...' : robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring'}
+              {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring'}
             </span>
+          </div>
+
+          {/* Chat Interface */}
+          <div className="w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setChatOpen(!chatOpen)}
+              className="w-full"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              {chatOpen ? 'Hide Chat' : 'Chat with Robot'}
+            </Button>
+
+            {chatOpen && (
+              <div className="mt-4 space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    placeholder="Ask me anything..."
+                    disabled={isProcessing}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={isProcessing || !userInput.trim()}
+                    size="icon"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

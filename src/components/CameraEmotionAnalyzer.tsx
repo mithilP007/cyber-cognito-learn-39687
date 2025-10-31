@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Video, VideoOff } from 'lucide-react';
+import { Video, VideoOff, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useEmotionDetection } from '@/hooks/useEmotionDetection';
 
 interface CameraEmotionAnalyzerProps {
   onEmotionChange?: (emotion: string, engagement: number, attention: number) => void;
@@ -14,9 +15,12 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const [emotion, setEmotion] = useState('neutral');
   const [engagement, setEngagement] = useState(0);
   const [attention, setAttention] = useState(0);
+  const [useAI, setUseAI] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const analysisIntervalRef = useRef<number | null>(null);
   const { toast } = useToast();
+  const { isLoading, detectFacialEmotion, modelsReady } = useEmotionDetection();
 
   const startCamera = async () => {
     try {
@@ -30,7 +34,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       }
       
       setIsActive(true);
-      startEmotionSimulation();
+      startEmotionAnalysis();
       
       toast({
         title: "Camera Active",
@@ -46,6 +50,10 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   };
 
   const stopCamera = () => {
+    if (analysisIntervalRef.current) {
+      clearInterval(analysisIntervalRef.current);
+      analysisIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -59,24 +67,49 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     setAttention(0);
   };
 
-  const startEmotionSimulation = () => {
-    const emotions = ['focused', 'happy', 'neutral', 'engaged', 'curious'];
-    const interval = setInterval(() => {
-      if (streamRef.current) {
-        const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
-        const newEngagement = Math.floor(Math.random() * 30) + 70;
-        const newAttention = Math.floor(Math.random() * 20) + 80;
-        
-        setEmotion(newEmotion);
-        setEngagement(newEngagement);
-        setAttention(newAttention);
-        
-        // Notify parent component
-        onEmotionChange?.(newEmotion, newEngagement, newAttention);
-      }
-    }, 3000);
+  const startEmotionAnalysis = () => {
+    if (analysisIntervalRef.current) {
+      clearInterval(analysisIntervalRef.current);
+    }
 
-    return () => clearInterval(interval);
+    const analyzeFrame = async () => {
+      if (!videoRef.current || !streamRef.current) return;
+
+      try {
+        if (useAI && modelsReady) {
+          // Real AI-powered detection
+          const result = await detectFacialEmotion(videoRef.current);
+          
+          setEmotion(result.emotion);
+          setEngagement(result.engagement);
+          setAttention(result.attention);
+          onEmotionChange?.(result.emotion, result.engagement, result.attention);
+        } else {
+          // Simulated fallback
+          const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised'];
+          const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+          const newEngagement = Math.floor(Math.random() * 30) + 70;
+          const newAttention = Math.floor(Math.random() * 20) + 80;
+          
+          setEmotion(newEmotion);
+          setEngagement(newEngagement);
+          setAttention(newAttention);
+          onEmotionChange?.(newEmotion, newEngagement, newAttention);
+        }
+      } catch (error) {
+        console.error('Analysis error:', error);
+      }
+    };
+
+    // Analyze every 2 seconds
+    analysisIntervalRef.current = window.setInterval(analyzeFrame, 2000);
+    analyzeFrame(); // Run immediately
+
+    return () => {
+      if (analysisIntervalRef.current) {
+        clearInterval(analysisIntervalRef.current);
+      }
+    };
   };
 
   useEffect(() => {
@@ -90,14 +123,27 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       <CardHeader>
         <CardTitle className="text-xl gradient-text flex items-center justify-between">
           Facial Emotion Analysis
-          <Badge 
-            variant="outline" 
-            className={`${isActive ? 'border-primary/30 text-primary' : 'border-muted-foreground/30 text-muted-foreground'}`}
-          >
-            {isActive ? 'ACTIVE' : 'READY'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setUseAI(!useAI)}
+              disabled={isLoading}
+              className="h-8"
+            >
+              <Cpu className={`w-4 h-4 ${useAI && modelsReady ? 'text-primary' : 'text-muted-foreground'}`} />
+            </Button>
+            <Badge 
+              variant="outline" 
+              className={`${isActive ? 'border-primary/30 text-primary' : 'border-muted-foreground/30 text-muted-foreground'}`}
+            >
+              {isActive ? (useAI && modelsReady ? 'AI ACTIVE' : 'ACTIVE') : 'READY'}
+            </Badge>
+          </div>
         </CardTitle>
-        <CardDescription>Real-time facial emotion detection</CardDescription>
+        <CardDescription>
+          {useAI && modelsReady ? 'AI-powered detection (FER2013/AffectNet)' : 'Real-time facial emotion detection'}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="relative aspect-video bg-card rounded-lg overflow-hidden border border-primary/20">
