@@ -3,6 +3,8 @@ import { MoodTracker } from './MoodTracker';
 import { VRExperience } from './VRExperience';
 import { AIChat } from './AIChat';
 import { BrainGames } from './BrainGames';
+import { CameraEmotionAnalyzer } from './CameraEmotionAnalyzer';
+import { MicrophoneEmotionAnalyzer } from './MicrophoneEmotionAnalyzer';
 import { Video, Mic, MessageSquare, Headphones } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +62,11 @@ export const Dashboard = () => {
               ))}
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <CameraEmotionAnalyzer />
+          <MicrophoneEmotionAnalyzer />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
