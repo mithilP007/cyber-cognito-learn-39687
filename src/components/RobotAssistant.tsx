@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bot, Sparkles, Heart, Zap } from 'lucide-react';
+import { Bot, Sparkles, Heart, Zap, Volume2, VolumeX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface RobotAssistantProps {
   facialEmotion: string;
@@ -52,6 +54,36 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
   const [message, setMessage] = useState("");
   const [robotMood, setRobotMood] = useState<'happy' | 'encouraging' | 'excited'>('happy');
   const [isAnimating, setIsAnimating] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const { toast } = useToast();
+
+  const speak = (text: string) => {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.1;
+    utterance.pitch = 1.2;
+    utterance.volume = 0.9;
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      toast({
+        title: "Speech Error",
+        description: "Unable to speak. Check browser support.",
+        variant: "destructive"
+      });
+    };
+    
+    speechSynthRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     // Determine robot mood and message based on emotions
@@ -81,11 +113,23 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
     const messages = encouragingMessages[messageCategory as keyof typeof encouragingMessages];
     const randomMessage = messages[Math.floor(Math.random() * messages.length)];
     setMessage(randomMessage);
+    
+    // Speak the message
+    speak(randomMessage);
 
     // Trigger animation
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 500);
   }, [facialEmotion, voiceEmotion, engagement, attention]);
+
+  useEffect(() => {
+    // Cleanup speech on unmount
+    return () => {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   const getRobotColor = () => {
     switch (robotMood) {
@@ -107,6 +151,25 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
     <Card className="cyber-card relative overflow-hidden">
       <CardContent className="pt-6">
         <div className="flex flex-col items-center space-y-4">
+          {/* Voice Toggle */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setVoiceEnabled(!voiceEnabled);
+              if (voiceEnabled) {
+                window.speechSynthesis.cancel();
+              }
+              toast({
+                title: voiceEnabled ? "Voice Disabled" : "Voice Enabled",
+                description: voiceEnabled ? "Robot will no longer speak" : "Robot will speak messages"
+              });
+            }}
+            className="absolute top-2 right-2"
+          >
+            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+          </Button>
+
           {/* Robot Avatar */}
           <div className={`relative ${getRobotAnimation()}`}>
             <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/30 ${isAnimating ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
@@ -140,7 +203,7 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className={`w-2 h-2 rounded-full ${robotMood === 'excited' ? 'bg-accent animate-pulse' : robotMood === 'encouraging' ? 'bg-secondary animate-pulse' : 'bg-primary'}`}></div>
             <span className="capitalize">
-              {robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring'}
+              {isSpeaking ? 'Speaking...' : robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring'}
             </span>
           </div>
         </div>
