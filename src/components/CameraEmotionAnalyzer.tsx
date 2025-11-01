@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Video, VideoOff, Cpu, Zap } from 'lucide-react';
+import { Video, VideoOff, Cpu, Zap, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useEmotionDetection } from '@/hooks/useEmotionDetection';
+import { useEmotionSpeech } from '@/hooks/useEmotionSpeech';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
@@ -18,11 +19,18 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const [engagement, setEngagement] = useState(0);
   const [attention, setAttention] = useState(0);
   const [useAI, setUseAI] = useState(true);
+  const [speechEnabled, setSpeechEnabled] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analysisIntervalRef = useRef<number | null>(null);
   const { toast } = useToast();
   const { isLoading, detectFacialEmotion, modelsReady } = useEmotionDetection();
+  const { cancelSpeech } = useEmotionSpeech({ 
+    enabled: speechEnabled && isActive, 
+    emotion, 
+    engagement, 
+    attention 
+  });
 
   const startCamera = async () => {
     try {
@@ -52,6 +60,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   };
 
   const stopCamera = () => {
+    cancelSpeech();
     if (analysisIntervalRef.current) {
       clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
@@ -75,7 +84,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     }
 
     const analyzeFrame = async () => {
-      if (!videoRef.current || !streamRef.current) return;
+      if (!videoRef.current || !streamRef.current || !isActive) return;
 
       try {
         if (useAI && modelsReady) {
@@ -88,7 +97,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
           onEmotionChange?.(result.emotion, result.engagement, result.attention);
         } else {
           // Simulated fallback
-          const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised'];
+          const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised', 'fearful'];
           const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
           const newEngagement = Math.floor(Math.random() * 30) + 70;
           const newAttention = Math.floor(Math.random() * 20) + 80;
@@ -103,16 +112,45 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       }
     };
 
-    // Analyze every 2 seconds
-    analysisIntervalRef.current = window.setInterval(analyzeFrame, 2000);
+    // Analyze every 1.5 seconds for more responsive updates
+    analysisIntervalRef.current = window.setInterval(analyzeFrame, 1500);
     analyzeFrame(); // Run immediately
+  };
 
+  useEffect(() => {
+    if (isActive) {
+      startEmotionAnalysis();
+    }
     return () => {
       if (analysisIntervalRef.current) {
         clearInterval(analysisIntervalRef.current);
       }
     };
-  };
+  }, [isActive, useAI, modelsReady]);
+
+  // Apply fullscreen emotion color effect
+  useEffect(() => {
+    if (!isActive || !emotion) return;
+    
+    const emotionColors: Record<string, string> = {
+      'neutral': 'rgba(34, 197, 94, 0.15)', // green
+      'happy': 'rgba(234, 179, 8, 0.15)', // yellow
+      'sad': 'rgba(239, 68, 68, 0.15)', // red
+      'depressed': 'rgba(239, 68, 68, 0.15)', // red
+      'angry': 'rgba(239, 68, 68, 0.2)', // red
+      'surprised': 'rgba(168, 85, 247, 0.15)', // purple
+      'fearful': 'rgba(249, 115, 22, 0.15)', // orange
+      'excited': 'rgba(234, 179, 8, 0.2)', // bright yellow
+    };
+
+    const color = emotionColors[emotion.toLowerCase()] || 'rgba(59, 130, 246, 0.1)';
+    document.body.style.backgroundColor = color;
+    document.body.style.transition = 'background-color 1s ease';
+
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, [emotion, isActive]);
 
   useEffect(() => {
     return () => {
@@ -146,35 +184,58 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between mb-4 p-3 bg-card/50 rounded-lg border border-primary/10">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="ai-toggle" className="text-sm font-medium cursor-pointer">
-              {useAI ? '🧠 AI Model Detection' : '🎲 Simulated Detection'}
-            </Label>
-            {isLoading && <Badge variant="outline" className="text-xs">Loading...</Badge>}
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-primary/10">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="ai-toggle" className="text-sm font-medium cursor-pointer">
+                {useAI ? '🧠 AI Model Detection' : '🎲 Simulated Detection'}
+              </Label>
+              {isLoading && <Badge variant="outline" className="text-xs">Loading...</Badge>}
+            </div>
+            <Switch
+              id="ai-toggle"
+              checked={useAI}
+              onCheckedChange={(checked) => {
+                setUseAI(checked);
+                toast({
+                  title: checked ? "AI Detection Enabled" : "AI Detection Disabled",
+                  description: checked ? (isLoading ? "Loading AI models..." : "Using real AI models") : "Using simulated detection"
+                });
+              }}
+              disabled={isLoading}
+            />
           </div>
-          <Switch
-            id="ai-toggle"
-            checked={useAI}
-            onCheckedChange={(checked) => {
-              setUseAI(checked);
-              toast({
-                title: checked ? "AI Detection Enabled" : "AI Detection Disabled",
-                description: checked ? (isLoading ? "Loading AI models..." : "Using real AI models") : "Using simulated detection"
-              });
-            }}
-            disabled={isLoading}
-          />
+          
+          <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-primary/10">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="speech-toggle" className="text-sm font-medium cursor-pointer">
+                {speechEnabled ? <Volume2 className="w-4 h-4 inline mr-1" /> : <VolumeX className="w-4 h-4 inline mr-1" />}
+                Robot Speech
+              </Label>
+            </div>
+            <Switch
+              id="speech-toggle"
+              checked={speechEnabled}
+              onCheckedChange={setSpeechEnabled}
+            />
+          </div>
         </div>
         <div className="relative aspect-video bg-card rounded-lg overflow-hidden border border-primary/20">
           {isActive ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
+            <>
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover mirror"
+              />
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Badge variant="default" className="animate-pulse">
+                  LIVE DETECTION
+                </Badge>
+              </div>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-muted-foreground">
               <VideoOff className="w-12 h-12" />
