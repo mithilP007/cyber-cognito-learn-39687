@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Bot, Sparkles, Heart, Zap, Volume2, VolumeX, MessageCircle, Send } from 'lucide-react';
+import { Bot, Sparkles, Heart, Zap, Volume2, VolumeX, MessageCircle, Send, Ear, EarOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useRobotConversation } from '@/hooks/useRobotConversation';
+import { useWakeWord } from '@/hooks/useWakeWord';
 
 interface RobotAssistantProps {
   facialEmotion: string;
@@ -60,9 +61,36 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [userInput, setUserInput] = useState("");
+  const [isAwake, setIsAwake] = useState(false);
   const speechSynthRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const { chat, isProcessing } = useRobotConversation();
+
+  const handleWakeUp = () => {
+    setIsAwake(true);
+    setRobotMood('excited');
+    setIsAnimating(true);
+    
+    // Play wake-up music
+    if (audioRef.current) {
+      audioRef.current.play();
+    }
+    
+    // Greet user
+    const greeting = "Hey there! I'm Joker, ready to help!";
+    setMessage(greeting);
+    speak(greeting);
+    
+    toast({
+      title: "Robot Activated! 🎉",
+      description: "Joker is ready to assist you",
+    });
+    
+    setTimeout(() => setIsAnimating(false), 2000);
+  };
+
+  const { isListening, isActive, startListening, stopListening } = useWakeWord('joker', handleWakeUp);
 
   const handleSendMessage = async () => {
     if (!userInput.trim() || isProcessing) return;
@@ -157,10 +185,17 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
   }, [facialEmotion, voiceEmotion, engagement, attention]);
 
   useEffect(() => {
+    // Initialize wake-up audio
+    audioRef.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+    audioRef.current.volume = 0.3;
+    
     // Cleanup speech on unmount
     return () => {
       if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     };
   }, []);
@@ -185,29 +220,39 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
     <Card className="cyber-card relative overflow-hidden">
       <CardContent className="pt-6">
         <div className="flex flex-col items-center space-y-4">
-          {/* Voice Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setVoiceEnabled(!voiceEnabled);
-              if (voiceEnabled) {
-                window.speechSynthesis.cancel();
-              }
-              toast({
-                title: voiceEnabled ? "Voice Disabled" : "Voice Enabled",
-                description: voiceEnabled ? "Robot will no longer speak" : "Robot will speak messages"
-              });
-            }}
-            className="absolute top-2 right-2"
-          >
-            {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-          </Button>
+          {/* Control Buttons */}
+          <div className="absolute top-2 right-2 flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setVoiceEnabled(!voiceEnabled);
+                if (voiceEnabled) {
+                  window.speechSynthesis.cancel();
+                }
+                toast({
+                  title: voiceEnabled ? "Voice Disabled" : "Voice Enabled",
+                  description: voiceEnabled ? "Robot will no longer speak" : "Robot will speak messages"
+                });
+              }}
+            >
+              {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={isListening ? stopListening : startListening}
+              className={isActive ? 'animate-pulse' : ''}
+            >
+              {isListening ? <Ear className="w-4 h-4 text-accent" /> : <EarOff className="w-4 h-4" />}
+            </Button>
+          </div>
 
           {/* Robot Avatar */}
           <div className={`relative ${getRobotAnimation()}`}>
-            <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/30 ${isAnimating ? 'scale-110' : 'scale-100'} transition-transform duration-300`}>
-              <Bot className={`w-12 h-12 ${getRobotColor()}`} />
+            <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border-2 border-primary/30 ${isAnimating ? 'scale-110 rotate-12' : 'scale-100'} ${isActive ? 'ring-4 ring-accent ring-offset-2 ring-offset-background' : ''} transition-all duration-300`}>
+              <Bot className={`w-12 h-12 ${getRobotColor()} ${isAwake ? 'animate-bounce' : ''}`} />
             </div>
             
             {/* Decorative elements */}
@@ -237,7 +282,9 @@ export const RobotAssistant = ({ facialEmotion, voiceEmotion, engagement, attent
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <div className={`w-2 h-2 rounded-full ${robotMood === 'excited' ? 'bg-accent animate-pulse' : robotMood === 'encouraging' ? 'bg-secondary animate-pulse' : 'bg-primary'}`}></div>
             <span className="capitalize">
-              {isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring'}
+              {isListening && !isActive && 'Listening for "joker"...'}
+              {isActive && 'ACTIVE'}
+              {!isListening && (isSpeaking ? 'Speaking...' : isProcessing ? 'Thinking...' : robotMood === 'encouraging' ? 'Supporting You' : robotMood === 'excited' ? 'Celebrating!' : 'Monitoring')}
             </span>
           </div>
 

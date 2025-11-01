@@ -1,9 +1,12 @@
 import { useState, useRef } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic, MicOff, Cpu, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useEmotionDetection } from '@/hooks/useEmotionDetection';
 
 interface MicrophoneEmotionAnalyzerProps {
   onEmotionChange?: (emotion: string | null) => void;
@@ -14,8 +17,11 @@ export const MicrophoneEmotionAnalyzer = ({ onEmotionChange }: MicrophoneEmotion
   const [emotion, setEmotion] = useState<string | null>(null);
   const [confidence, setConfidence] = useState(0);
   const [tone, setTone] = useState<string | null>(null);
+  const [useAI, setUseAI] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const { toast } = useToast();
+  const { detectVoiceEmotion, isLoading, modelsReady } = useEmotionDetection();
 
   const startRecording = async () => {
     try {
@@ -63,7 +69,24 @@ export const MicrophoneEmotionAnalyzer = ({ onEmotionChange }: MicrophoneEmotion
     }
   };
 
-  const analyzeVoiceEmotion = () => {
+  const analyzeVoiceEmotion = async (audioData?: Float32Array) => {
+    if (useAI && modelsReady && audioData) {
+      try {
+        const result = await detectVoiceEmotion(audioData);
+        setEmotion(result.emotion);
+        setTone(result.tone);
+        setConfidence(Math.round(result.confidence * 100));
+        onEmotionChange?.(result.emotion);
+      } catch (error) {
+        console.error('Voice emotion detection error:', error);
+        simulateEmotion();
+      }
+    } else {
+      simulateEmotion();
+    }
+  };
+
+  const simulateEmotion = () => {
     const emotions = ['calm', 'excited', 'confident', 'neutral', 'engaged'];
     const tones = ['steady', 'energetic', 'composed', 'dynamic'];
     
@@ -81,16 +104,45 @@ export const MicrophoneEmotionAnalyzer = ({ onEmotionChange }: MicrophoneEmotion
       <CardHeader>
         <CardTitle className="text-xl gradient-text flex items-center justify-between">
           Voice Emotion Analysis
-          <Badge 
-            variant="outline" 
-            className={`${isRecording ? 'border-primary/30 text-primary animate-neon-pulse' : 'border-muted-foreground/30 text-muted-foreground'}`}
-          >
-            {isRecording ? 'RECORDING' : 'READY'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant="outline" 
+              className={`${isRecording ? 'border-primary/30 text-primary animate-neon-pulse' : 'border-muted-foreground/30 text-muted-foreground'}`}
+            >
+              {isRecording ? 'RECORDING' : 'READY'}
+            </Badge>
+            <Badge 
+              variant={useAI ? "default" : "secondary"}
+              className="gap-1"
+            >
+              {useAI ? <Zap className="w-3 h-3" /> : <Cpu className="w-3 h-3" />}
+              {useAI ? 'AI' : 'SIM'}
+            </Badge>
+          </div>
         </CardTitle>
         <CardDescription>Real-time voice emotion detection</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex items-center justify-between mb-4 p-3 bg-card/50 rounded-lg border border-primary/10">
+          <div className="flex items-center gap-2">
+            <Label htmlFor="voice-ai-toggle" className="text-sm font-medium cursor-pointer">
+              {useAI ? '🧠 AI Model Detection' : '🎲 Simulated Detection'}
+            </Label>
+            {isLoading && <Badge variant="outline" className="text-xs">Loading...</Badge>}
+          </div>
+          <Switch
+            id="voice-ai-toggle"
+            checked={useAI}
+            onCheckedChange={(checked) => {
+              setUseAI(checked);
+              toast({
+                title: checked ? "AI Detection Enabled" : "AI Detection Disabled",
+                description: checked ? (isLoading ? "Loading AI models..." : "Using real AI models") : "Using simulated detection"
+              });
+            }}
+            disabled={isLoading}
+          />
+        </div>
         <div className="relative h-32 bg-card rounded-lg overflow-hidden border border-primary/20 flex items-center justify-center">
           {isRecording ? (
             <div className="flex items-center gap-2">
@@ -125,24 +177,25 @@ export const MicrophoneEmotionAnalyzer = ({ onEmotionChange }: MicrophoneEmotion
 
         {emotion && (
           <div className="space-y-4 pt-4 border-t border-primary/20">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Detected Emotion</span>
-              <span className="text-lg font-bold text-primary capitalize">{emotion}</span>
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-secondary/10 to-accent/10 rounded-lg">
+              <div className="flex flex-col">
+                <span className="text-xs text-muted-foreground">Detected Emotion</span>
+                <span className="text-2xl font-bold text-primary capitalize">{emotion}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-xs text-muted-foreground">Confidence</span>
+                <span className="text-lg font-bold text-accent">{confidence}%</span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Voice Tone</span>
-              <span className="text-sm font-bold text-accent capitalize">{tone}</span>
-            </div>
-
-            <div>
+            <div className="p-3 bg-secondary/10 rounded-lg border border-secondary/20">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-foreground/80">Confidence</span>
-                <span className="text-sm font-bold text-secondary">{confidence}%</span>
+                <span className="text-xs text-muted-foreground">Voice Tone</span>
+                <span className="text-lg font-bold text-secondary capitalize">{tone}</span>
               </div>
               <div className="w-full h-2 bg-card rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-secondary to-primary transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-secondary to-accent transition-all duration-500 animate-pulse"
                   style={{ width: `${confidence}%` }}
                 />
               </div>
