@@ -14,4 +14,22 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: [
+      'face-api.js',
+      '@vladmandic/face-api',
+      '@huggingface/transformers'
+    ],
+    exclude: [],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'face-api': ['face-api.js', '@vladmandic/face-api'],
+          'transformers': ['@huggingface/transformers'],
+        },
+      },
+    },
+  },
 }));
