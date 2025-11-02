@@ -23,10 +23,10 @@ export const useEmotionDetection = () => {
         console.log('Loading emotion detection models...');
         
         // Load facial emotion model (trained on FER2013/AffectNet)
-        // Using image classification model fine-tuned for emotions
+        // Using publicly accessible emotion detection model
         const facial = await pipeline(
           'image-classification',
-          'Xenova/vit-base-patch16-224-in21k-finetuned-emotion',
+          'onnx-community/emotion-ferplus-8',
           { device: 'webgpu' }
         );
         setFacialModel(facial);
@@ -36,7 +36,7 @@ export const useEmotionDetection = () => {
         // Using audio classification model
         const audio = await pipeline(
           'audio-classification',
-          'Xenova/wav2vec2-large-xlsr-53-emotion',
+          'onnx-community/wav2vec2-large-xlsr-53-english',
           { device: 'webgpu' }
         );
         setAudioModel(audio);
@@ -54,13 +54,13 @@ export const useEmotionDetection = () => {
           console.log('WebGPU failed, falling back to CPU...');
           const facial = await pipeline(
             'image-classification',
-            'Xenova/vit-base-patch16-224-in21k-finetuned-emotion'
+            'onnx-community/emotion-ferplus-8'
           );
           setFacialModel(facial);
           
           const audio = await pipeline(
             'audio-classification',
-            'Xenova/wav2vec2-large-xlsr-53-emotion'
+            'onnx-community/wav2vec2-large-xlsr-53-english'
           );
           setAudioModel(audio);
           
