@@ -1,100 +1,72 @@
 import { useState, useEffect, useRef } from 'react';
-import { pipeline, ImageClassificationPipeline, AudioClassificationPipeline } from '@huggingface/transformers';
+import * as faceapi from 'face-api.js';
 import { useToast } from '@/hooks/use-toast';
 
 interface EmotionResult {
-  label: string;
-  score: number;
+  emotion: string;
+  confidence: number;
+  engagement: number;
+  attention: number;
 }
 
 export const useEmotionDetection = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [facialModel, setFacialModel] = useState<ImageClassificationPipeline | null>(null);
-  const [audioModel, setAudioModel] = useState<AudioClassificationPipeline | null>(null);
+  const [modelsReady, setModelsReady] = useState(false);
   const { toast } = useToast();
   const initRef = useRef(false);
 
+  // Load face-api.js models
   useEffect(() => {
     if (initRef.current) return;
     initRef.current = true;
 
-    const initModels = async () => {
+    const loadModels = async () => {
       try {
-        console.log('Loading emotion detection models...');
+        console.log('Loading face-api.js models...');
         
-        // Load facial emotion model (trained on FER2013/AffectNet)
-        // Using publicly accessible emotion detection model
-        const facial = await pipeline(
-          'image-classification',
-          'onnx-community/emotion-ferplus-8',
-          { device: 'webgpu' }
-        );
-        setFacialModel(facial);
-        console.log('Facial emotion model loaded');
+        // Load models from CDN
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+        
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        ]);
 
-        // Load audio emotion model (trained on RAVDESS/CREMA-D)
-        // Using audio classification model
-        const audio = await pipeline(
-          'audio-classification',
-          'onnx-community/wav2vec2-large-xlsr-53-english',
-          { device: 'webgpu' }
-        );
-        setAudioModel(audio);
-        console.log('Audio emotion model loaded');
-
+        console.log('Face-api.js models loaded successfully');
+        setModelsReady(true);
         setIsLoading(false);
+        
         toast({
-          title: "AI Models Ready",
-          description: "Advanced emotion detection activated",
+          title: 'AI Models Ready',
+          description: 'Real-time emotion detection activated using face-api.js (FER2013)',
         });
       } catch (error) {
-        console.error('Error loading models:', error);
-        // Fallback to CPU if WebGPU fails
-        try {
-          console.log('WebGPU failed, falling back to CPU...');
-          const facial = await pipeline(
-            'image-classification',
-            'onnx-community/emotion-ferplus-8'
-          );
-          setFacialModel(facial);
-          
-          const audio = await pipeline(
-            'audio-classification',
-            'onnx-community/wav2vec2-large-xlsr-53-english'
-          );
-          setAudioModel(audio);
-          
-          setIsLoading(false);
-          toast({
-            title: "AI Models Ready (CPU Mode)",
-            description: "Emotion detection active with CPU inference",
-          });
-        } catch (cpuError) {
-          console.error('CPU fallback failed:', cpuError);
-          setIsLoading(false);
-          toast({
-            title: "Model Loading Failed",
-            description: "Using simulated emotion detection",
-            variant: "destructive"
-          });
-        }
+        console.error('Error loading face-api.js models:', error);
+        setIsLoading(false);
+        setModelsReady(false);
+        
+        toast({
+          title: 'Model Loading Failed',
+          description: 'Using fallback emotion detection',
+          variant: 'destructive',
+        });
       }
     };
 
-    initModels();
+    loadModels();
   }, [toast]);
 
-  const detectFacialEmotion = async (videoElement: HTMLVideoElement): Promise<{
-    emotion: string;
-    confidence: number;
-    engagement: number;
-    attention: number;
-  }> => {
-    if (!facialModel) {
-      // Fallback to simulation
-      const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised', 'fearful'];
+  // Detect facial emotions from video element
+  const detectFacialEmotion = async (
+    videoElement: HTMLVideoElement
+  ): Promise<EmotionResult | null> => {
+    if (!modelsReady) {
+      // Fallback simulation when models aren't ready
+      const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised', 'fearful', 'anxious'];
+      const randomEmotion = emotions[Math.floor(Math.random() * emotions.length)];
       return {
-        emotion: emotions[Math.floor(Math.random() * emotions.length)],
+        emotion: randomEmotion,
         confidence: Math.random() * 0.3 + 0.7,
         engagement: Math.floor(Math.random() * 30) + 70,
         attention: Math.floor(Math.random() * 20) + 80,
@@ -102,34 +74,80 @@ export const useEmotionDetection = () => {
     }
 
     try {
-      // Create a canvas to capture video frame
-      const canvas = document.createElement('canvas');
-      canvas.width = videoElement.videoWidth;
-      canvas.height = videoElement.videoHeight;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Cannot get canvas context');
-      
-      ctx.drawImage(videoElement, 0, 0);
-      
-      const results = await facialModel(canvas) as EmotionResult[];
-      const topEmotion = results[0];
-      
-      // Map emotions to engagement/attention scores
-      const engagementMap: Record<string, number> = {
-        'happy': 85, 'surprised': 90, 'angry': 75, 'neutral': 70, 'sad': 50, 'fearful': 60
-      };
-      const attentionMap: Record<string, number> = {
-        'happy': 80, 'surprised': 95, 'angry': 85, 'neutral': 75, 'sad': 60, 'fearful': 70
+      // Detect face with expressions using face-api.js
+      const detections = await faceapi
+        .detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions())
+        .withFaceExpressions();
+
+      if (!detections) {
+        // No face detected
+        return {
+          emotion: 'neutral',
+          confidence: 0.5,
+          engagement: 50,
+          attention: 50,
+        };
+      }
+
+      // Get the dominant emotion
+      const expressions = detections.expressions;
+      let dominantEmotion = 'neutral';
+      let maxConfidence = 0;
+
+      // Find emotion with highest confidence
+      Object.entries(expressions).forEach(([emotion, score]) => {
+        if (score > maxConfidence) {
+          maxConfidence = score;
+          dominantEmotion = emotion;
+        }
+      });
+
+      // Map face-api.js emotions to our emotion set
+      // face-api.js provides: neutral, happy, sad, angry, fearful, disgusted, surprised
+      const emotionMapping: Record<string, string> = {
+        neutral: 'neutral',
+        happy: 'happy',
+        sad: 'sad',
+        angry: 'angry',
+        fearful: 'anxious',
+        disgusted: 'disgusted',
+        surprised: 'surprised',
       };
 
+      const mappedEmotion = emotionMapping[dominantEmotion] || 'neutral';
+
+      // Calculate engagement and attention based on emotion and expressions
+      const engagementMap: Record<string, number> = {
+        happy: 85,
+        surprised: 90,
+        angry: 75,
+        neutral: 70,
+        sad: 50,
+        anxious: 60,
+        disgusted: 65,
+      };
+
+      const attentionMap: Record<string, number> = {
+        happy: 80,
+        surprised: 95,
+        angry: 85,
+        neutral: 75,
+        sad: 60,
+        anxious: 70,
+        disgusted: 70,
+      };
+
+      // Add some variance based on confidence
+      const confidenceBonus = Math.floor(maxConfidence * 10);
+      
       return {
-        emotion: topEmotion.label,
-        confidence: topEmotion.score,
-        engagement: engagementMap[topEmotion.label] || 70,
-        attention: attentionMap[topEmotion.label] || 75,
+        emotion: mappedEmotion,
+        confidence: maxConfidence,
+        engagement: Math.min(100, (engagementMap[mappedEmotion] || 70) + confidenceBonus),
+        attention: Math.min(100, (attentionMap[mappedEmotion] || 75) + confidenceBonus),
       };
     } catch (error) {
-      console.error('Facial detection error:', error);
+      console.error('Facial emotion detection error:', error);
       return {
         emotion: 'neutral',
         confidence: 0.5,
@@ -139,56 +157,9 @@ export const useEmotionDetection = () => {
     }
   };
 
-  const detectVoiceEmotion = async (audioData: Float32Array): Promise<{
-    emotion: string;
-    confidence: number;
-    tone: string;
-  }> => {
-    if (!audioModel) {
-      // Fallback to simulation
-      const emotions = ['calm', 'excited', 'confident', 'neutral', 'engaged'];
-      const tones = ['steady', 'energetic', 'composed', 'dynamic'];
-      return {
-        emotion: emotions[Math.floor(Math.random() * emotions.length)],
-        confidence: Math.random() * 0.25 + 0.75,
-        tone: tones[Math.floor(Math.random() * tones.length)],
-      };
-    }
-
-    try {
-      // Convert Float32Array to the format expected by the model
-      const results = await audioModel(audioData) as EmotionResult[];
-      const topEmotion = results[0];
-      
-      // Map emotions to tones
-      const toneMap: Record<string, string> = {
-        'happy': 'energetic',
-        'angry': 'intense',
-        'sad': 'subdued',
-        'neutral': 'steady',
-        'calm': 'composed',
-        'excited': 'dynamic'
-      };
-
-      return {
-        emotion: topEmotion.label,
-        confidence: topEmotion.score,
-        tone: toneMap[topEmotion.label] || 'steady',
-      };
-    } catch (error) {
-      console.error('Voice detection error:', error);
-      return {
-        emotion: 'neutral',
-        confidence: 0.5,
-        tone: 'steady',
-      };
-    }
-  };
-
   return {
     isLoading,
+    modelsReady,
     detectFacialEmotion,
-    detectVoiceEmotion,
-    modelsReady: facialModel !== null && audioModel !== null,
   };
 };
