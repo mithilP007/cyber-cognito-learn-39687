@@ -13,6 +13,28 @@ interface CameraEmotionAnalyzerProps {
   onEmotionChange?: (emotion: string, engagement: number, attention: number) => void;
 }
 
+// Emotion to background color mapping
+const emotionColorMap: Record<string, string> = {
+  sad: '#ff4444',
+  depression: '#ff4444',
+  depressed: '#ff4444',
+  happy: '#ffeb3b',
+  neutral: '#4caf50',
+  focus: '#4caf50',
+  focused: '#4caf50',
+  anxious: '#9c27b0',
+  anxiety: '#9c27b0',
+  angry: '#ff6b6b',
+  surprised: '#ffa726',
+  disgusted: '#8d6e63',
+  fearful: '#9c27b0',
+};
+
+const getEmotionColor = (emotion: string): string => {
+  const normalized = emotion.toLowerCase();
+  return emotionColorMap[normalized] || '#4caf50'; // Default to green
+};
+
 export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzerProps) => {
   const [isActive, setIsActive] = useState(false);
   const [emotion, setEmotion] = useState('neutral');
@@ -20,9 +42,13 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const [attention, setAttention] = useState(0);
   const [useAI, setUseAI] = useState(true);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [backgroundColor, setBackgroundColor] = useState('#4caf50');
+  
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analysisIntervalRef = useRef<number | null>(null);
+  
   const { toast } = useToast();
   const { isLoading, detectFacialEmotion, modelsReady } = useEmotionDetection();
   const { cancelSpeech } = useEmotionSpeech({ 
@@ -32,207 +58,253 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     attention 
   });
 
+  // Start camera with proper error handling
   const startCamera = async () => {
     try {
-      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
-          facingMode: 'user',
           width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: false 
       });
       
-      console.log('Camera stream obtained:', stream.active);
+      streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        
-        // Wait for metadata to load then play
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded');
-          videoRef.current?.play().then(() => {
-            console.log('Video playing');
-          }).catch(e => console.error('Play error:', e));
-        };
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current?.play();
+              resolve(true);
+            };
+          }
+        });
       }
       
       setIsActive(true);
-      
-      // Start analysis after a short delay to ensure video is ready
-      setTimeout(() => {
-        startEmotionAnalysis();
-      }, 500);
-      
       toast({
-        title: "Camera Active",
-        description: "Analyzing facial emotions in real-time",
+        title: 'Camera Started',
+        description: 'Webcam is now active and analyzing emotions.',
       });
+      
+      // Start emotion detection if AI is enabled
+      if (useAI && modelsReady) {
+        startEmotionDetection();
+      }
     } catch (error) {
-      console.error('Camera error:', error);
+      console.error('Failed to start camera:', error);
       toast({
-        title: "Camera Access Denied",
-        description: "Please allow camera access to use this feature",
-        variant: "destructive",
+        title: 'Camera Error',
+        description: 'Failed to access webcam. Please check permissions.',
+        variant: 'destructive',
       });
     }
   };
 
+  // Stop camera and clean up resources
   const stopCamera = () => {
-    cancelSpeech();
     if (analysisIntervalRef.current) {
       clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
     }
+    
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    
+    cancelSpeech();
     setIsActive(false);
     setEmotion('neutral');
     setEngagement(0);
     setAttention(0);
+    setBackgroundColor('#4caf50');
+    
+    toast({
+      title: 'Camera Stopped',
+      description: 'Webcam has been turned off.',
+    });
   };
 
-  const startEmotionAnalysis = () => {
+  // Start continuous emotion detection
+  const startEmotionDetection = () => {
     if (analysisIntervalRef.current) {
       clearInterval(analysisIntervalRef.current);
     }
 
-    const analyzeFrame = async () => {
-      if (!videoRef.current || !streamRef.current || !isActive) return;
-
-      try {
-        if (useAI && modelsReady) {
-          // Real AI-powered detection
+    // Analyze emotions every 1 second for real-time feedback
+    analysisIntervalRef.current = window.setInterval(async () => {
+      if (videoRef.current && canvasRef.current && modelsReady) {
+        try {
           const result = await detectFacialEmotion(videoRef.current);
           
-          setEmotion(result.emotion);
-          setEngagement(result.engagement);
-          setAttention(result.attention);
-          onEmotionChange?.(result.emotion, result.engagement, result.attention);
-        } else {
-          // Simulated fallback
-          const emotions = ['happy', 'sad', 'angry', 'neutral', 'surprised', 'fearful'];
-          const newEmotion = emotions[Math.floor(Math.random() * emotions.length)];
-          const newEngagement = Math.floor(Math.random() * 30) + 70;
-          const newAttention = Math.floor(Math.random() * 20) + 80;
-          
-          setEmotion(newEmotion);
-          setEngagement(newEngagement);
-          setAttention(newAttention);
-          onEmotionChange?.(newEmotion, newEngagement, newAttention);
+          if (result) {
+            const detectedEmotion = result.emotion;
+            const engagementScore = result.engagement;
+            const attentionScore = result.attention;
+            
+            setEmotion(detectedEmotion);
+            setEngagement(engagementScore);
+            setAttention(attentionScore);
+            
+            // Update background color based on emotion
+            const color = getEmotionColor(detectedEmotion);
+            setBackgroundColor(color);
+            
+            // Call callback if provided
+            if (onEmotionChange) {
+              onEmotionChange(detectedEmotion, engagementScore, attentionScore);
+            }
+          }
+        } catch (error) {
+          console.error('Emotion detection error:', error);
         }
-      } catch (error) {
-        console.error('Analysis error:', error);
       }
-    };
-
-    // Analyze every 1.5 seconds for more responsive updates
-    analysisIntervalRef.current = window.setInterval(analyzeFrame, 1500);
-    analyzeFrame(); // Run immediately
+    }, 1000); // Detect every second
   };
 
-  useEffect(() => {
+  // Toggle camera
+  const toggleCamera = () => {
     if (isActive) {
-      startEmotionAnalysis();
+      stopCamera();
+    } else {
+      startCamera();
     }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       if (analysisIntervalRef.current) {
         clearInterval(analysisIntervalRef.current);
       }
-    };
-  }, [isActive, useAI, modelsReady]);
-
-  // Apply fullscreen emotion color effect
-  useEffect(() => {
-    if (!isActive || !emotion) return;
-    
-    const emotionColors: Record<string, string> = {
-      'neutral': 'rgba(34, 197, 94, 0.15)', // green
-      'happy': 'rgba(234, 179, 8, 0.15)', // yellow
-      'sad': 'rgba(239, 68, 68, 0.15)', // red
-      'depressed': 'rgba(239, 68, 68, 0.15)', // red
-      'angry': 'rgba(239, 68, 68, 0.2)', // red
-      'surprised': 'rgba(168, 85, 247, 0.15)', // purple
-      'fearful': 'rgba(249, 115, 22, 0.15)', // orange
-      'excited': 'rgba(234, 179, 8, 0.2)', // bright yellow
-    };
-
-    const color = emotionColors[emotion.toLowerCase()] || 'rgba(59, 130, 246, 0.1)';
-    document.body.style.backgroundColor = color;
-    document.body.style.transition = 'background-color 1s ease';
-
-    return () => {
-      document.body.style.backgroundColor = '';
-    };
-  }, [emotion, isActive]);
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      cancelSpeech();
     };
   }, []);
 
+  // Restart detection when AI toggle changes
+  useEffect(() => {
+    if (isActive && useAI && modelsReady) {
+      startEmotionDetection();
+    } else if (analysisIntervalRef.current) {
+      clearInterval(analysisIntervalRef.current);
+      analysisIntervalRef.current = null;
+    }
+  }, [useAI, modelsReady, isActive]);
+
   return (
-    <Card className="cyber-card">
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-xl gradient-text flex items-center justify-between">
-          Facial Emotion Analysis
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant="outline" 
-              className={`${isActive ? 'border-primary/30 text-primary animate-neon-pulse' : 'border-muted-foreground/30 text-muted-foreground'}`}
-            >
-              {isActive ? 'LIVE' : 'READY'}
-            </Badge>
-            <Badge 
-              variant={useAI ? "default" : "secondary"}
-              className="gap-1"
-            >
-              {useAI ? <Zap className="w-3 h-3" /> : <Cpu className="w-3 h-3" />}
-              {useAI ? 'AI' : 'SIM'}
-            </Badge>
-          </div>
+        <CardTitle className="flex items-center gap-2">
+          <Cpu className="h-5 w-5" />
+          Emotion & Engagement Analyzer
         </CardTitle>
         <CardDescription>
-          {useAI && modelsReady ? 'AI-powered detection (FER2013/AffectNet)' : 'Real-time facial emotion detection'}
+          Real-time facial emotion detection and engagement tracking using AI
+          {isLoading && " (Loading AI models...)"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-primary/10">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="ai-toggle" className="text-sm font-medium cursor-pointer">
-                {useAI ? '🧠 AI Model Detection' : '🎲 Simulated Detection'}
-              </Label>
-              {isLoading && <Badge variant="outline" className="text-xs">Loading...</Badge>}
+        {/* Video Feed Container */}
+        <div 
+          className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden"
+          style={{
+            backgroundColor: isActive ? backgroundColor : '#1f2937',
+            transition: 'background-color 0.5s ease'
+          }}
+        >
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+            style={{ display: isActive ? 'block' : 'none' }}
+          />
+          <canvas
+            ref={canvasRef}
+            className="absolute top-0 left-0 w-full h-full"
+            style={{ display: 'none' }}
+          />
+          {!isActive && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <VideoOff className="h-16 w-16 text-gray-600" />
             </div>
+          )}
+        </div>
+
+        {/* Emotion Display */}
+        {isActive && (
+          <div className="flex flex-wrap gap-2 items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Detected Emotion:</span>
+              <Badge 
+                variant="outline" 
+                className="text-lg font-semibold"
+                style={{ 
+                  backgroundColor: backgroundColor + '40',
+                  borderColor: backgroundColor,
+                  color: '#000'
+                }}
+              >
+                {emotion.toUpperCase()}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1">
+                <Zap className="h-4 w-4 text-orange-500" />
+                <span className="text-sm">Engagement: {engagement}%</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Cpu className="h-4 w-4 text-blue-500" />
+                <span className="text-sm">Attention: {attention}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Color Legend */}
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-sm font-medium mb-2">Emotion Color Mapping:</p>
+          <div className="flex flex-wrap gap-2 text-xs">
+            <span className="px-2 py-1 rounded" style={{ backgroundColor: '#ff4444', color: '#fff' }}>Sad/Depression: Red</span>
+            <span className="px-2 py-1 rounded" style={{ backgroundColor: '#ffeb3b', color: '#000' }}>Happy: Yellow</span>
+            <span className="px-2 py-1 rounded" style={{ backgroundColor: '#4caf50', color: '#fff' }}>Neutral/Focus: Green</span>
+            <span className="px-2 py-1 rounded" style={{ backgroundColor: '#9c27b0', color: '#fff' }}>Anxious: Purple</span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="ai-toggle" className="flex items-center gap-2">
+              <Cpu className="h-4 w-4" />
+              AI Emotion Detection
+            </Label>
             <Switch
               id="ai-toggle"
               checked={useAI}
-              onCheckedChange={(checked) => {
-                setUseAI(checked);
-                toast({
-                  title: checked ? "AI Detection Enabled" : "AI Detection Disabled",
-                  description: checked ? (isLoading ? "Loading AI models..." : "Using real AI models") : "Using simulated detection"
-                });
-              }}
-              disabled={isLoading}
+              onCheckedChange={setUseAI}
+              disabled={!modelsReady || isLoading}
             />
           </div>
-          
-          <div className="flex items-center justify-between p-3 bg-card/50 rounded-lg border border-primary/10">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="speech-toggle" className="text-sm font-medium cursor-pointer">
-                {speechEnabled ? <Volume2 className="w-4 h-4 inline mr-1" /> : <VolumeX className="w-4 h-4 inline mr-1" />}
-                Robot Speech
-              </Label>
-            </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="speech-toggle" className="flex items-center gap-2">
+              {speechEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              Voice Feedback
+            </Label>
             <Switch
               id="speech-toggle"
               checked={speechEnabled}
@@ -240,96 +312,32 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
             />
           </div>
         </div>
-        <div className="relative aspect-video bg-black rounded-lg overflow-hidden border-2 border-primary/30 shadow-lg">
-          {isActive ? (
-            <>
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-                style={{ 
-                  display: 'block',
-                  transform: 'scaleX(-1)',
-                  WebkitTransform: 'scaleX(-1)',
-                  minHeight: '300px'
-                }}
-              />
-              <div className="absolute top-3 right-3 flex gap-2 z-10">
-                <Badge className="bg-red-600 text-white animate-pulse shadow-lg">
-                  <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
-                  LIVE
-                </Badge>
-              </div>
-              <div className="absolute bottom-3 left-3 z-10">
-                <Badge variant="outline" className="bg-black/60 text-white border-primary/50">
-                  Face Detection Active
-                </Badge>
-              </div>
-            </>
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-4 min-h-[300px]">
-              <VideoOff className="w-16 h-16" />
-              <p className="text-sm">Click "Start Camera" to begin</p>
-            </div>
-          )}
-        </div>
 
-        <Button 
-          onClick={isActive ? stopCamera : startCamera}
+        {/* Action Button */}
+        <Button
+          onClick={toggleCamera}
+          disabled={isLoading}
           className="w-full"
-          variant={isActive ? "secondary" : "default"}
+          variant={isActive ? 'destructive' : 'default'}
         >
           {isActive ? (
             <>
-              <VideoOff className="w-4 h-4 mr-2" />
+              <VideoOff className="mr-2 h-4 w-4" />
               Stop Camera
             </>
           ) : (
             <>
-              <Video className="w-4 h-4 mr-2" />
-              Start Camera
+              <Video className="mr-2 h-4 w-4" />
+              {isLoading ? 'Loading AI Models...' : 'Start Camera'}
             </>
           )}
         </Button>
 
-        {isActive && (
-          <div className="space-y-4 pt-4 border-t border-primary/20">
-            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg">
-              <div className="flex flex-col">
-                <span className="text-xs text-muted-foreground">Detected Emotion</span>
-                <span className="text-2xl font-bold text-primary capitalize">{emotion}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2 p-3 bg-accent/10 rounded-lg border border-accent/20">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Zap className="w-3 h-3" /> Engagement
-                </span>
-                <div className="text-3xl font-bold text-accent">{engagement}%</div>
-                <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-accent to-primary transition-all duration-500"
-                    style={{ width: `${engagement}%` }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 p-3 bg-secondary/10 rounded-lg border border-secondary/20">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  👁️ Attention
-                </span>
-                <div className="text-3xl font-bold text-secondary">{attention}%</div>
-                <div className="w-full h-1.5 bg-card rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-secondary to-accent transition-all duration-500"
-                    style={{ width: `${attention}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* Status Messages */}
+        {!modelsReady && !isLoading && (
+          <p className="text-sm text-yellow-600 text-center">
+            AI models not loaded. Emotion detection will be limited.
+          </p>
         )}
       </CardContent>
     </Card>
