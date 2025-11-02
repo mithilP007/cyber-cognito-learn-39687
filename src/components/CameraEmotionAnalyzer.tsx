@@ -35,12 +35,19 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        
+        // Ensure video plays
+        await videoRef.current.play();
       }
       
       setIsActive(true);
@@ -51,6 +58,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
         description: "Analyzing facial emotions in real-time",
       });
     } catch (error) {
+      console.error('Camera error:', error);
       toast({
         title: "Camera Access Denied",
         description: "Please allow camera access to use this feature",
@@ -220,7 +228,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
             />
           </div>
         </div>
-        <div className="relative aspect-video bg-card rounded-lg overflow-hidden border border-primary/20">
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-primary/20">
           {isActive ? (
             <>
               <video
@@ -228,11 +236,12 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover mirror"
+                className="w-full h-full object-cover scale-x-[-1]"
+                style={{ display: 'block' }}
               />
               <div className="absolute top-2 right-2 flex gap-2">
-                <Badge variant="default" className="animate-pulse">
-                  LIVE DETECTION
+                <Badge variant="default" className="animate-pulse bg-red-600">
+                  ● LIVE
                 </Badge>
               </div>
             </>
