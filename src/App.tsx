@@ -7,7 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MainDashboard from "./pages/MainDashboard";
 import SubDashboard from "./pages/SubDashboard";
-import EEGSimulator from "./components/EEGSimulator";
+import EEGSimulatorPage from "./pages/EEGSimulatorPage";
 
 const queryClient = new QueryClient();
 
@@ -21,7 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<MainDashboard />} />
           <Route path="/dashboard/sub" element={<SubDashboard />} />
-          <Route path="/eeg-simulator" element={<EEGSimulator />} />
+          <Route path="/eeg-simulator" element={<EEGSimulatorPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
