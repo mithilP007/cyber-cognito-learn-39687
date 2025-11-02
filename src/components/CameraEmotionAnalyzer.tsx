@@ -34,6 +34,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
 
   const startCamera = async () => {
     try {
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: 'user',
@@ -42,16 +43,27 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
         } 
       });
       
+      console.log('Camera stream obtained:', stream.active);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         
-        // Ensure video plays
-        await videoRef.current.play();
+        // Wait for metadata to load then play
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          videoRef.current?.play().then(() => {
+            console.log('Video playing');
+          }).catch(e => console.error('Play error:', e));
+        };
       }
       
       setIsActive(true);
-      startEmotionAnalysis();
+      
+      // Start analysis after a short delay to ensure video is ready
+      setTimeout(() => {
+        startEmotionAnalysis();
+      }, 500);
       
       toast({
         title: "Camera Active",
@@ -228,7 +240,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
             />
           </div>
         </div>
-        <div className="relative aspect-video bg-black rounded-lg overflow-hidden border border-primary/20">
+        <div className="relative aspect-video bg-black rounded-lg overflow-hidden border-2 border-primary/30 shadow-lg">
           {isActive ? (
             <>
               <video
@@ -236,18 +248,30 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover scale-x-[-1]"
-                style={{ display: 'block' }}
+                className="w-full h-full object-cover"
+                style={{ 
+                  display: 'block',
+                  transform: 'scaleX(-1)',
+                  WebkitTransform: 'scaleX(-1)',
+                  minHeight: '300px'
+                }}
               />
-              <div className="absolute top-2 right-2 flex gap-2">
-                <Badge variant="default" className="animate-pulse bg-red-600">
-                  ● LIVE
+              <div className="absolute top-3 right-3 flex gap-2 z-10">
+                <Badge className="bg-red-600 text-white animate-pulse shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
+                  LIVE
+                </Badge>
+              </div>
+              <div className="absolute bottom-3 left-3 z-10">
+                <Badge variant="outline" className="bg-black/60 text-white border-primary/50">
+                  Face Detection Active
                 </Badge>
               </div>
             </>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-              <VideoOff className="w-12 h-12" />
+            <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-4 min-h-[300px]">
+              <VideoOff className="w-16 h-16" />
+              <p className="text-sm">Click "Start Camera" to begin</p>
             </div>
           )}
         </div>
