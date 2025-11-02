@@ -26,6 +26,151 @@
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
+.controls {
+  display: flex;
+  gap: 15px;
+}
+
+.control-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.control-btn.start {
+  background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+  color: white;
+}
+
+.control-btn.start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+}
+
+.control-btn.stop {
+  background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+  color: white;
+}
+
+.control-btn.stop:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+/* Dataset Upload Section */
+.dataset-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dataset-section h3 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  color: #4ECDC4;
+  font-weight: bold;
+}
+
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #FFD93D 0%, #F6C23E 100%);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(255, 217, 61, 0.3);
+}
+
+.upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 217, 61, 0.5);
+}
+
+.file-name {
+  font-size: 14px;
+  color: #4ECDC4;
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(78, 205, 196, 0.1);
+  border-radius: 5px;
+}
+
+.upload-status {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 5px;
+}
+
+.upload-status.success {
+  color: #4ECDC4;
+  background: rgba(78, 205, 196, 0.15);
+}
+
+.upload-status.error {
+  color: #FF6B6B;
+  background: rgba(255, 107, 107, 0.15);
+}
+
+.upload-status.loading {
+  color: #FFD93D;
+  background: rgba(255, 217, 61, 0.15);
+}
+
+.mode-toggle {
+  margin-top: 15px;
+  display: flex;
+  gap: 20px;
+}
+
+.mode-toggle label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.mode-toggle label:hover {
+  color: #4ECDC4;
+}
+
+.mode-toggle input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #4ECDC4;
+}
+
+.dataset-indicator {
+  margin: 0;
+  font-size: 14px;
+  color: #FFD93D;
+  font-weight: 500;
+}
+
 .brain-state {
   padding: 12px 24px;
   border-radius: 25px;
@@ -34,6 +179,13 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   animation: pulse 2s ease-in-out infinite;
+  margin-bottom: 25px;
+}
+
+.brain-state h3 {
+  margin: 0;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .brain-state-label {
@@ -47,123 +199,58 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
   }
   50% {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   }
 }
 
-.controls {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 30px;
-  justify-content: center;
+.waveforms {
+  margin-top: 30px;
 }
 
-.control-button {
-  padding: 12px 32px;
-  font-size: 16px;
+.waveforms h3 {
+  margin: 20px 0 10px 0;
+  font-size: 18px;
   font-weight: bold;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-.control-button.start {
-  background: linear-gradient(135deg, #00c853 0%, #00e676 100%);
-  color: white;
-}
-
-.control-button.start:hover {
-  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 200, 83, 0.4);
-}
-
-.control-button.stop {
-  background: linear-gradient(135deg, #ff1744 0%, #ff5252 100%);
-  color: white;
-}
-
-.control-button.stop:hover {
-  background: linear-gradient(135deg, #ff5252 0%, #ff1744 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(255, 23, 68, 0.4);
-}
-
-.control-button.reset {
-  background: linear-gradient(135deg, #546e7a 0%, #607d8b 100%);
-  color: white;
-}
-
-.control-button.reset:hover {
-  background: linear-gradient(135deg, #607d8b 0%, #546e7a 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(96, 125, 139, 0.4);
-}
-
-.control-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.waveforms-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
 .waveform {
-  background: #0a0a0a;
-  border-radius: 8px;
-  padding: 15px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
   position: relative;
+  margin-bottom: 25px;
+  border-radius: 8px;
   overflow: hidden;
-}
-
-.waveform::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, currentColor, transparent);
-  opacity: 0.5;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
 .waveform-canvas {
   width: 100%;
   height: 120px;
-  border-radius: 4px;
   display: block;
+  background: #1a1a2e;
 }
 
 .waveform-value {
   position: absolute;
-  top: 20px;
-  right: 25px;
+  top: 10px;
+  right: 15px;
   font-size: 20px;
   font-weight: bold;
-  background: rgba(0, 0, 0, 0.7);
   padding: 8px 16px;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  font-family: 'Courier New', monospace;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .eeg-info {
+  margin-top: 30px;
+  padding: 20px;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  padding: 15px;
-  border-left: 4px solid #4ecdc4;
-  margin-top: 20px;
+  border-left: 4px solid #4ECDC4;
 }
 
 .eeg-info p {
@@ -203,6 +290,15 @@
   }
   
   .control-button {
+    width: 100%;
+  }
+
+  .upload-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .upload-btn {
     width: 100%;
   }
   
