@@ -8,7 +8,6 @@
   max-width: 1200px;
   margin: 0 auto;
 }
-
 .eeg-header {
   display: flex;
   justify-content: space-between;
@@ -17,7 +16,6 @@
   padding-bottom: 20px;
   border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
-
 .eeg-header h2 {
   font-size: 28px;
   font-weight: bold;
@@ -25,12 +23,10 @@
   color: #ffffff;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
-
 .controls {
   display: flex;
   gap: 15px;
 }
-
 .control-btn {
   padding: 12px 24px;
   font-size: 16px;
@@ -43,27 +39,22 @@
   letter-spacing: 1px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
-
 .control-btn.start {
   background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
   color: white;
 }
-
 .control-btn.start:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
 }
-
 .control-btn.stop {
   background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
   color: white;
 }
-
 .control-btn.stop:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
 }
-
 /* Dataset Upload Section */
 .dataset-section {
   margin-bottom: 25px;
@@ -72,21 +63,18 @@
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
 .dataset-section h3 {
   margin: 0 0 15px 0;
   font-size: 20px;
   color: #4ECDC4;
   font-weight: bold;
 }
-
 .upload-controls {
   display: flex;
   align-items: center;
   gap: 15px;
   flex-wrap: wrap;
 }
-
 .upload-btn {
   padding: 10px 20px;
   font-size: 14px;
@@ -99,12 +87,10 @@
   transition: all 0.3s ease;
   box-shadow: 0 3px 10px rgba(255, 217, 61, 0.3);
 }
-
 .upload-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(255, 217, 61, 0.5);
 }
-
 .file-name {
   font-size: 14px;
   color: #4ECDC4;
@@ -113,35 +99,29 @@
   background: rgba(78, 205, 196, 0.1);
   border-radius: 5px;
 }
-
 .upload-status {
   font-size: 14px;
   font-weight: 600;
   padding: 6px 12px;
   border-radius: 5px;
 }
-
 .upload-status.success {
   color: #4ECDC4;
   background: rgba(78, 205, 196, 0.15);
 }
-
 .upload-status.error {
   color: #FF6B6B;
   background: rgba(255, 107, 107, 0.15);
 }
-
 .upload-status.loading {
   color: #FFD93D;
   background: rgba(255, 217, 61, 0.15);
 }
-
 .mode-toggle {
   margin-top: 15px;
   display: flex;
   gap: 20px;
 }
-
 .mode-toggle label {
   display: flex;
   align-items: center;
@@ -152,25 +132,21 @@
   cursor: pointer;
   transition: color 0.3s ease;
 }
-
 .mode-toggle label:hover {
   color: #4ECDC4;
 }
-
 .mode-toggle input[type="radio"] {
   width: 18px;
   height: 18px;
   cursor: pointer;
   accent-color: #4ECDC4;
 }
-
 .dataset-indicator {
   margin: 0;
   font-size: 14px;
   color: #FFD93D;
   font-weight: 500;
 }
-
 .brain-state {
   padding: 12px 24px;
   border-radius: 25px;
@@ -181,18 +157,15 @@
   animation: pulse 2s ease-in-out infinite;
   margin-bottom: 25px;
 }
-
 .brain-state h3 {
   margin: 0;
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
-
 .brain-state-label {
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
-
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
@@ -203,11 +176,9 @@
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   }
 }
-
 .waveforms {
   margin-top: 30px;
 }
-
 .waveforms h3 {
   margin: 20px 0 10px 0;
   font-size: 18px;
@@ -216,7 +187,6 @@
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-
 .waveform {
   position: relative;
   margin-bottom: 25px;
@@ -224,14 +194,12 @@
   overflow: hidden;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
-
 .waveform-canvas {
   width: 100%;
   height: 120px;
   display: block;
   background: #1a1a2e;
 }
-
 .waveform-value {
   position: absolute;
   top: 10px;
@@ -244,7 +212,6 @@
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
-
 .eeg-info {
   margin-top: 30px;
   padding: 20px;
@@ -252,62 +219,128 @@
   border-radius: 8px;
   border-left: 4px solid #4ECDC4;
 }
-
 .eeg-info p {
   margin: 8px 0;
   font-size: 14px;
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.8);
 }
+.eeg-info p:first-child { margin-top: 0; }
+.eeg-info p:last-child { margin-bottom: 0; }
 
-.eeg-info p:first-child {
-  margin-top: 0;
+/* Dynamic Interventions Section */
+.interventions {
+  position: relative;
+  margin-top: 24px;
+  padding: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  overflow: hidden;
 }
-
-.eeg-info p:last-child {
-  margin-bottom: 0;
+.interventions h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #4ECDC4;
 }
+/* floating animated visuals container */
+.intervention-visual {
+  position: relative;
+  height: 160px;
+  background: radial-gradient(120px 80px at 10% 20%, rgba(78,205,196,0.15), transparent 60%),
+              radial-gradient(160px 100px at 90% 30%, rgba(255,107,107,0.12), transparent 60%),
+              radial-gradient(200px 140px at 40% 80%, rgba(255,217,61,0.10), transparent 60%);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.bubble {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: rgba(78,205,196,0.6);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(78,205,196,0.45);
+  animation: floatUp 6s ease-in-out infinite;
+}
+@keyframes floatUp {
+  0% { transform: translateY(30px) scale(0.8); opacity: 0; }
+  20% { opacity: 1; }
+  50% { transform: translateY(-40px) scale(1); }
+  100% { transform: translateY(-120px) scale(0.9); opacity: 0; }
+}
+/* AR-style overlay */
+.ar-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: conic-gradient(from 90deg at 50% 50%, rgba(78,205,196,0.08), rgba(22,33,62,0.0) 30%, rgba(255,107,107,0.08) 60%, rgba(22,33,62,0.0) 90%);
+  mix-blend-mode: screen;
+  animation: hueShift 8s linear infinite;
+}
+@keyframes hueShift {
+  0% { filter: hue-rotate(0deg) saturate(1); }
+  50% { filter: hue-rotate(25deg) saturate(1.15); }
+  100% { filter: hue-rotate(0deg) saturate(1); }
+}
+/* adaptive quiz / prompt */
+.quiz-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  backdrop-filter: blur(6px);
+}
+.quiz-card h4 { margin: 0 0 8px 0; font-size: 16px; color: #ffffff; }
+.quiz-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.quiz-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.quiz-btn.primary { background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); color: #0b1b2e; }
+.quiz-btn.secondary { background: linear-gradient(135deg, #FFD93D 0%, #F6C23E 100%); color: #1a1a2e; }
+.quiz-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.25); }
+/* motivational cue */
+.cue {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(78,205,196,0.15);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(78,205,196,0.25);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+.cue .dot { width: 10px; height: 10px; border-radius: 50%; background: #4ECDC4; box-shadow: 0 0 12px rgba(78,205,196,0.8); }
+/* state-tailored themes */
+.state-focused .intervention-visual { background: linear-gradient(135deg, rgba(78,205,196,0.15), rgba(20,80,90,0.1)); }
+.state-drowsy .intervention-visual { background: linear-gradient(135deg, rgba(255,217,61,0.12), rgba(90,70,20,0.08)); }
+.state-relaxed .intervention-visual { background: linear-gradient(135deg, rgba(100,149,237,0.14), rgba(22,33,62,0.08)); }
+.state-anxious .intervention-visual { background: linear-gradient(135deg, rgba(255,107,107,0.16), rgba(80,22,33,0.1)); }
+/* subtle particle burst on change */
+.particle { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #FFD93D; box-shadow: 0 0 10px rgba(255,217,61,0.8); animation: burst 700ms ease-out forwards; }
+@keyframes burst { from { transform: translate(0,0) scale(0.6); opacity: 1; } to { transform: translate(var(--dx, 20px), var(--dy, -20px)) scale(1); opacity: 0; } }
+/* audio/visual badge */
+.av-badge { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+.av-badge .icon { width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg,#4ECDC4,#44A08D); box-shadow: 0 0 10px rgba(78,205,196,0.65); }
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .eeg-simulator {
-    padding: 15px;
-  }
-  
-  .eeg-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-  
-  .eeg-header h2 {
-    font-size: 22px;
-  }
-  
-  .controls {
-    flex-direction: column;
-    width: 100%;
-  }
-  
-  .control-button {
-    width: 100%;
-  }
-
-  .upload-controls {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .upload-btn {
-    width: 100%;
-  }
-  
-  .waveform-canvas {
-    height: 100px;
-  }
-  
-  .waveform-value {
-    font-size: 16px;
-    padding: 6px 12px;
-  }
-}
+  .eeg-simulator { padding: 15px; }
+  .eeg-header { flex-direction: column; gap: 15px; align-items: flex-start; }
+  .eeg-header h2 { font-size: 22px; }
+  .controls { flex-direction: column; width: 100%; }
+  .control-button { width: 100%; }
+  .upload-controls { flex-direction: column; align-items: flex-start; }
+  .upload-btn { width: 100%; }
+  .waveform-canvas { height: 100px; }
+  .waveform-value { font-size: 16px; padding: 6px 12px;
