@@ -26,10 +26,10 @@ export const Navigation = () => {
           >
             <button className="flex items-center gap-1 text-foreground/80 hover:text-primary transition-colors">
               Dashboard
-              <ChevronDown className="w-4 h-4" />
+              {/* <ChevronDown className="w-4 h-4" /> */}
             </button>
             
-            {dashboardOpen && (
+            {/* {dashboardOpen && (
               <div className="absolute top-full left-0 mt-2 w-48 bg-background border border-primary/30 rounded-lg shadow-lg backdrop-blur-md overflow-hidden">
                 <Link 
                   to="/dashboard" 
@@ -44,7 +44,7 @@ export const Navigation = () => {
                   Sub Dashboard
                 </Link>
               </div>
-            )}
+            )} */}
           </div>
           
           <Link to="/eeg-simulator" className="text-foreground/80 hover:text-primary transition-colors">

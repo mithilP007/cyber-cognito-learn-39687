@@ -353,4 +353,13 @@ const EEGSimulator: React.FC = () => {
             </div>
           </div>
           <div className="eeg-info">
-            <p>This simulator generates EEG-like waveforms
+            <p>This simulator generates EEG-like waveforms</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EEGSimulator;
+            

@@ -14,33 +14,148 @@ interface CameraEmotionAnalyzerProps {
 }
 
 // Emotion types for type safety
-type EmotionType = 'sad' | 'depression' | 'depressed' | 'happy' | 'neutral' | 'focus' | 'focused' | 'anxious' | 'anxiety' | 'angry' | 'surprised' | 'disgusted' | 'fearful';
+type EmotionType =
+  | 'sad'
+  | 'depression'
+  | 'depressed'
+  | 'happy'
+  | 'neutral'
+  | 'focus'
+  | 'focused'
+  | 'anxious'
+  | 'anxiety'
+  | 'angry'
+  | 'surprised'
+  | 'disgusted'
+  | 'fearful';
 
-// Emotion to background color mapping with proper typing
-const emotionColorMap: Record<EmotionType, string> = {
-  sad: '#ff4444',
-  depression: '#ff4444',
-  depressed: '#ff4444',
-  happy: '#ffeb3b',
-  neutral: '#4caf50',
-  focus: '#4caf50',
-  focused: '#4caf50',
-  anxious: '#9c27b0',
-  anxiety: '#9c27b0',
-  angry: '#ff6b6b',
-  surprised: '#ffa726',
-  disgusted: '#8d6e63',
-  fearful: '#9c27b0',
+type EmotionTheme = {
+  background: string;
+  foreground: string;
+  primary: string;
+  primaryForeground: string;
+  border: string;
+  ring: string;
+  emotionColor: string;
+};
+
+const DEFAULT_THEME: EmotionTheme = {
+  background: '220 25% 8%',
+  foreground: '180 100% 95%',
+  primary: '187 100% 50%',
+  primaryForeground: '220 25% 8%',
+  border: '187 100% 50%',
+  ring: '187 100% 50%',
+  emotionColor: '140 70% 60%',
+};
+
+const createTheme = (overrides: Partial<EmotionTheme>): EmotionTheme => ({
+  ...DEFAULT_THEME,
+  ...overrides,
+});
+
+const BASE_EMOTION_THEMES = {
+  sad: createTheme({
+    background: '220 45% 18%',
+    foreground: '200 80% 92%',
+    primary: '220 65% 55%',
+    primaryForeground: '210 100% 98%',
+    border: '220 55% 45%',
+    ring: '220 75% 60%',
+    emotionColor: '220 75% 60%',
+  }),
+  happy: createTheme({
+    background: '50 100% 88%',
+    foreground: '30 50% 15%',
+    primary: '48 100% 55%',
+    primaryForeground: '220 25% 8%',
+    border: '48 100% 65%',
+    ring: '48 100% 55%',
+    emotionColor: '48 100% 55%',
+  }),
+  neutral: createTheme({
+    background: '220 25% 10%',
+    foreground: '180 50% 90%',
+    primary: '187 100% 50%',
+    primaryForeground: '220 25% 8%',
+    border: '220 20% 35%',
+    ring: '187 100% 50%',
+    emotionColor: '187 100% 50%',
+  }),
+  focus: createTheme({
+    background: '210 45% 16%',
+    foreground: '160 30% 90%',
+    primary: '160 70% 45%',
+    primaryForeground: '220 25% 8%',
+    border: '160 60% 40%',
+    ring: '160 70% 45%',
+    emotionColor: '160 70% 45%',
+  }),
+  anxious: createTheme({
+    background: '275 35% 18%',
+    foreground: '280 70% 92%',
+    primary: '280 70% 55%',
+    primaryForeground: '220 25% 8%',
+    border: '280 55% 45%',
+    ring: '280 70% 55%',
+    emotionColor: '280 70% 55%',
+  }),
+  angry: createTheme({
+    background: '5 65% 18%',
+    foreground: '25 80% 95%',
+    primary: '5 80% 55%',
+    primaryForeground: '210 100% 98%',
+    border: '5 70% 45%',
+    ring: '5 80% 55%',
+    emotionColor: '5 80% 55%',
+  }),
+  surprised: createTheme({
+    background: '30 100% 85%',
+    foreground: '24 60% 18%',
+    primary: '30 100% 55%',
+    primaryForeground: '220 25% 8%',
+    border: '30 80% 50%',
+    ring: '30 100% 55%',
+    emotionColor: '30 100% 55%',
+  }),
+  disgusted: createTheme({
+    background: '110 35% 22%',
+    foreground: '100 40% 90%',
+    primary: '110 55% 45%',
+    primaryForeground: '220 25% 8%',
+    border: '110 40% 40%',
+    ring: '110 55% 45%',
+    emotionColor: '110 55% 45%',
+  }),
+  fearful: createTheme({
+    background: '260 40% 18%',
+    foreground: '260 60% 92%',
+    primary: '260 70% 55%',
+    primaryForeground: '220 25% 8%',
+    border: '260 55% 45%',
+    ring: '260 70% 55%',
+    emotionColor: '260 70% 55%',
+  }),
+} as const satisfies Record<string, EmotionTheme>;
+
+const EMOTION_THEME_ALIASES: Record<string, EmotionTheme> = {
+  sad: BASE_EMOTION_THEMES.sad,
+  depression: BASE_EMOTION_THEMES.sad,
+  depressed: BASE_EMOTION_THEMES.sad,
+  happy: BASE_EMOTION_THEMES.happy,
+  neutral: BASE_EMOTION_THEMES.neutral,
+  focus: BASE_EMOTION_THEMES.focus,
+  focused: BASE_EMOTION_THEMES.focus,
+  anxious: BASE_EMOTION_THEMES.anxious,
+  anxiety: BASE_EMOTION_THEMES.anxious,
+  angry: BASE_EMOTION_THEMES.angry,
+  surprised: BASE_EMOTION_THEMES.surprised,
+  disgusted: BASE_EMOTION_THEMES.disgusted,
+  fearful: BASE_EMOTION_THEMES.fearful,
 };
 
 // Constants for magic numbers
 const ANALYSIS_INTERVAL_MS = 1000;
-const DEFAULT_COLOR = '#4caf50';
-
-const getEmotionColor = (emotion: string): string => {
-  const normalized = emotion.toLowerCase() as EmotionType;
-  return emotionColorMap[normalized] || DEFAULT_COLOR;
-};
 
 export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzerProps) => {
   const [isActive, setIsActive] = useState(false);
@@ -49,13 +164,14 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const [attention, setAttention] = useState(0);
   const [useAI, setUseAI] = useState(true);
   const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [backgroundColor, setBackgroundColor] = useState(DEFAULT_COLOR);
+  const [activeTheme, setActiveTheme] = useState<EmotionTheme>(DEFAULT_THEME);
   const [isMounted, setIsMounted] = useState(true);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const analysisIntervalRef = useRef<number | null>(null);
+  const defaultThemeVarsRef = useRef<Record<string, string> | null>(null);
 
   const { toast } = useToast();
   const { isLoading, detectFacialEmotion, modelsReady } = useEmotionDetection();
@@ -117,7 +233,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       videoRef.current.srcObject = null;
     }
     if (analysisIntervalRef.current !== null) {
-      clearInterval(analysisIntervalRef.current);
+      window.clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
     }
   }, []);
@@ -130,10 +246,10 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
 
     // Clear any existing interval
     if (analysisIntervalRef.current !== null) {
-      clearInterval(analysisIntervalRef.current);
+      window.clearInterval(analysisIntervalRef.current);
     }
 
-    analysisIntervalRef.current = setInterval(async () => {
+    analysisIntervalRef.current = window.setInterval(async () => {
       if (!videoRef.current || !canvasRef.current || !isMounted || !isActive) {
         return;
       }
@@ -148,15 +264,18 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const result = await detectFacialEmotion(canvas);
+      const result = await detectFacialEmotion(video);
       
       if (!isMounted) return;
 
       if (result) {
+        const normalizedEmotion = result.emotion.toLowerCase();
+        const theme = EMOTION_THEME_ALIASES[normalizedEmotion] ?? DEFAULT_THEME;
+
         setEmotion(result.emotion);
         setEngagement(result.engagement);
         setAttention(result.attention);
-        setBackgroundColor(getEmotionColor(result.emotion));
+        setActiveTheme(theme);
 
         onEmotionChange?.(result.emotion, result.engagement, result.attention);
       }
@@ -183,17 +302,77 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     if (isActive && useAI && modelsReady) {
       startEmotionDetection();
     } else if (analysisIntervalRef.current !== null) {
-      clearInterval(analysisIntervalRef.current);
+      window.clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
     }
 
     return () => {
       if (analysisIntervalRef.current !== null) {
-        clearInterval(analysisIntervalRef.current);
+        window.clearInterval(analysisIntervalRef.current);
         analysisIntervalRef.current = null;
       }
     };
   }, [isActive, useAI, modelsReady, startEmotionDetection]);
+
+  // Effect: drive global background animation and theme variables
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const root = document.documentElement;
+    const body = document.body;
+    const cssVarKeys = [
+      '--background',
+      '--foreground',
+      '--primary',
+      '--primary-foreground',
+      '--border',
+      '--ring',
+      '--emotion-color',
+    ] as const;
+
+    if (!defaultThemeVarsRef.current) {
+      const computed = getComputedStyle(root);
+      defaultThemeVarsRef.current = cssVarKeys.reduce<Record<string, string>>((acc, key) => {
+        acc[key] = computed.getPropertyValue(key).trim();
+        return acc;
+      }, {});
+    }
+
+    const applyTheme = (theme: EmotionTheme) => {
+      root.style.setProperty('--background', theme.background);
+      root.style.setProperty('--foreground', theme.foreground);
+      root.style.setProperty('--primary', theme.primary);
+      root.style.setProperty('--primary-foreground', theme.primaryForeground);
+      root.style.setProperty('--border', theme.border);
+      root.style.setProperty('--ring', theme.ring);
+      root.style.setProperty('--emotion-color', theme.emotionColor);
+    };
+
+    const resetTheme = () => {
+      if (!defaultThemeVarsRef.current) return;
+      cssVarKeys.forEach(key => {
+        const value = defaultThemeVarsRef.current?.[key];
+        if (value) {
+          root.style.setProperty(key, value);
+        } else {
+          root.style.removeProperty(key);
+        }
+      });
+    };
+
+    if (isActive) {
+      body.classList.add('emotion-bg-active');
+      applyTheme(activeTheme);
+    } else {
+      body.classList.remove('emotion-bg-active');
+      resetTheme();
+    }
+
+    return () => {
+      body.classList.remove('emotion-bg-active');
+      resetTheme();
+    };
+  }, [activeTheme, isActive]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -322,23 +501,6 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
         </CardContent>
       </Card>
 
-      {/* Optional: overlay glow around whole screen */}
-      {isActive && (
-        <div
-          style={{
-            pointerEvents: 'none',
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '100vw',
-            height: '100vh',
-            zIndex: 0,
-            background: `radial-gradient(circle at center, ${backgroundColor}33 30%, transparent 85%)`,
-            transition: 'background 0.5s',
-          }}
-          aria-hidden="true"
-        />
-      )}
     </div>
   );
 };
