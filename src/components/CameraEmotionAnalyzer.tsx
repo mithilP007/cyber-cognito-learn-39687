@@ -65,15 +65,6 @@ const BASE_EMOTION_THEMES = {
     emotionColor: '220 75% 60%',
   }),
   happy: createTheme({
-    background: '50 100% 88%',
-    foreground: '30 50% 15%',
-    primary: '48 100% 55%',
-    primaryForeground: '220 25% 8%',
-    border: '48 100% 65%',
-    ring: '48 100% 55%',
-    emotionColor: '48 100% 55%',
-  }),
-  neutral: createTheme({
     background: '220 25% 10%',
     foreground: '180 50% 90%',
     primary: '187 100% 50%',
@@ -81,6 +72,15 @@ const BASE_EMOTION_THEMES = {
     border: '220 20% 35%',
     ring: '187 100% 50%',
     emotionColor: '187 100% 50%',
+  }),
+  neutral: createTheme({
+    background: '50 100% 88%',
+    foreground: '30 50% 15%',
+    primary: '48 100% 55%',
+    primaryForeground: '220 25% 8%',
+    border: '48 100% 65%',
+    ring: '48 100% 55%',
+    emotionColor: '48 100% 55%',
   }),
   focus: createTheme({
     background: '210 45% 16%',
@@ -154,6 +154,32 @@ const EMOTION_THEME_ALIASES: Record<string, EmotionTheme> = {
   fearful: BASE_EMOTION_THEMES.fearful,
 };
 
+const DEFAULT_MANUAL_EMOTION: keyof typeof BASE_EMOTION_THEMES = 'neutral';
+
+const MANUAL_TESTER_OPTIONS: Array<{ key: keyof typeof BASE_EMOTION_THEMES; label: string }> = [
+  { key: 'happy', label: 'Happy' },
+  { key: 'neutral', label: 'Neutral' },
+  { key: 'focus', label: 'Focused' },
+  { key: 'sad', label: 'Sad' },
+  { key: 'anxious', label: 'Anxious' },
+  { key: 'angry', label: 'Angry' },
+  { key: 'surprised', label: 'Surprised' },
+  { key: 'disgusted', label: 'Disgusted' },
+  { key: 'fearful', label: 'Fearful' },
+];
+
+const PREVIEW_EMOTIONS: EmotionType[] = [
+  'neutral',
+  'happy',
+  'sad',
+  'focus',
+  'anxious',
+  'angry',
+  'surprised',
+  'disgusted',
+  'fearful',
+];
+
 // Constants for magic numbers
 const ANALYSIS_INTERVAL_MS = 1000;
 
@@ -164,6 +190,8 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const [attention, setAttention] = useState(0);
   const [useAI, setUseAI] = useState(true);
   const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [manualMode, setManualMode] = useState(false);
+  const [manualEmotion, setManualEmotion] = useState<keyof typeof BASE_EMOTION_THEMES | null>(null);
   const [activeTheme, setActiveTheme] = useState<EmotionTheme>(DEFAULT_THEME);
   const [isMounted, setIsMounted] = useState(true);
 
@@ -172,6 +200,8 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
   const streamRef = useRef<MediaStream | null>(null);
   const analysisIntervalRef = useRef<number | null>(null);
   const defaultThemeVarsRef = useRef<Record<string, string> | null>(null);
+  const isStartingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const { toast } = useToast();
   const { isLoading, detectFacialEmotion, modelsReady } = useEmotionDetection();
@@ -190,23 +220,250 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     };
   }, []);
 
+  // Monitor video stream health
+  useEffect(() => {
+    if (!isActive || !streamRef.current) return;
+
+    let restartAttempted = false;
+
+    const checkStreamHealth = () => {
+      if (!streamRef.current || !isMountedRef.current || !isActive) return;
+      
+      const activeTracks = streamRef.current.getTracks().filter(track => track.readyState === 'live');
+      if (activeTracks.length === 0 && videoRef.current && !restartAttempted) {
+        console.warn('All stream tracks ended unexpectedly');
+        restartAttempted = true;
+        // Don't auto-restart, just log the issue
+        // User can manually restart if needed
+      }
+    };
+
+    const healthCheckInterval = setInterval(checkStreamHealth, 2000);
+    return () => {
+      clearInterval(healthCheckInterval);
+      restartAttempted = false;
+    };
+  }, [isActive]);
+
   // Start camera function
   const startCamera = useCallback(async () => {
-    if (!videoRef.current) return;
+    // Prevent multiple simultaneous starts
+    if (isStartingRef.current) {
+      console.log('Camera start already in progress');
+      return;
+    }
+
+    if (!videoRef.current) {
+      console.warn('Video ref not available');
+      setIsActive(false);
+      return;
+    }
+
+    // If we already have an active stream, don't restart
+    if (streamRef.current) {
+      const activeTracks = streamRef.current.getTracks().filter(track => track.readyState === 'live');
+      if (activeTracks.length > 0) {
+        console.log('Stream already active, reusing existing stream');
+        // Make sure video element has the stream
+        if (videoRef.current.srcObject !== streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+          videoRef.current.play().catch(err => {
+            console.warn('Failed to play existing stream:', err);
+          });
+        }
+        isStartingRef.current = false;
+        return;
+      }
+    }
+
+    isStartingRef.current = true;
+
+    // Stop any existing stream first
+    if (streamRef.current) {
+      console.log('Stopping existing stream');
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log(`Stopped ${track.kind} track`);
+      });
+      streamRef.current = null;
+    }
 
     try {
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: 640, height: 480 },
+        video: { 
+          facingMode: 'user', 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 } 
+        },
       });
       
-      if (!isMounted) {
+      console.log('Camera access granted, stream obtained');
+      
+      // Note: We continue even if component appears unmounted during React StrictMode remounts.
+      // The stream will be properly cleaned up on actual unmount.
+
+      const video = videoRef.current;
+      
+      // Double-check video ref is still valid
+      if (!video) {
+        console.warn('Video element no longer available');
         stream.getTracks().forEach(track => track.stop());
+        isStartingRef.current = false;
+        setIsActive(false);
+        return;
+      }
+      
+      // Store stream reference BEFORE setting srcObject
+      streamRef.current = stream;
+      
+      // Set the stream to the video element
+      console.log('Setting stream to video element');
+      video.srcObject = stream;
+
+      // Wait for the video to be ready before playing
+      console.log('Waiting for video metadata...');
+      await new Promise<void>((resolve, reject) => {
+        // Check if already ready
+        if (video.readyState >= 2) {
+          console.log('Video already ready');
+          resolve();
+          return;
+        }
+
+        let resolved = false;
+        const cleanup = () => {
+          if (resolved) return;
+          video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+          video.removeEventListener('loadeddata', handleLoadedData);
+          video.removeEventListener('canplay', handleCanPlay);
+          video.removeEventListener('error', handleError);
+        };
+
+        const handleLoadedMetadata = () => {
+          if (resolved) return;
+          console.log('Video metadata loaded');
+          resolved = true;
+          cleanup();
+          resolve();
+        };
+
+        const handleLoadedData = () => {
+          if (resolved) return;
+          console.log('Video data loaded');
+          resolved = true;
+          cleanup();
+          resolve();
+        };
+
+        const handleCanPlay = () => {
+          if (resolved) return;
+          console.log('Video can play');
+          resolved = true;
+          cleanup();
+          resolve();
+        };
+
+        const handleError = (err: Event) => {
+          if (resolved) return;
+          console.error('Video element error:', err);
+          resolved = true;
+          cleanup();
+          reject(err);
+        };
+
+        video.addEventListener('loadedmetadata', handleLoadedMetadata, { once: true });
+        video.addEventListener('loadeddata', handleLoadedData, { once: true });
+        video.addEventListener('canplay', handleCanPlay, { once: true });
+        video.addEventListener('error', handleError, { once: true });
+
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            cleanup();
+            if (video.readyState >= 2) {
+              console.log('Video ready (timeout check)');
+              resolve();
+            } else {
+              console.error('Video metadata loading timeout, readyState:', video.readyState);
+              reject(new Error('Video metadata loading timeout'));
+            }
+          }
+        }, 5000);
+      });
+
+      // Final check before playing - ensure stream is still set
+      if (!streamRef.current || streamRef.current !== stream) {
+        console.warn('Stream reference lost during initialization, aborting play', {
+          hasStream: !!streamRef.current,
+          streamMatch: streamRef.current === stream,
+        });
+        // Don't stop the stream here - it might be valid, just the ref was cleared
+        // The cleanup will handle it if component is actually unmounting
+        isStartingRef.current = false;
+        setIsActive(false);
         return;
       }
 
-      videoRef.current.srcObject = stream;
-      streamRef.current = stream;
-      await videoRef.current.play();
+      // Ensure video dimensions are set
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        console.warn('Video dimensions are 0, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // Now play the video
+      console.log('Attempting to play video...');
+      try {
+        await video.play();
+        console.log('Video playing successfully');
+      } catch (playError) {
+        console.error('Video play error:', playError);
+        // Try to play again after a short delay
+        setTimeout(async () => {
+          if (video && streamRef.current && isMountedRef.current) {
+            try {
+              await video.play();
+              console.log('Video play succeeded on retry');
+            } catch (retryError) {
+              console.error('Video play retry failed:', retryError);
+            }
+          }
+        }, 100);
+      }
+
+      // Verify stream tracks are active
+      const activeTracks = stream.getTracks().filter(track => track.readyState === 'live');
+      console.log(`Stream status: ${activeTracks.length} active track(s) out of ${stream.getTracks().length} total`);
+      
+      if (activeTracks.length === 0) {
+        console.error('No active tracks after setup!');
+        toast({
+          title: 'Camera Error',
+          description: 'Camera stream ended unexpectedly. Please try again.',
+          variant: 'destructive',
+        });
+        setIsActive(false);
+        isStartingRef.current = false;
+        return;
+      }
+
+      // Monitor tracks for unexpected stops
+      stream.getTracks().forEach(track => {
+        track.addEventListener('ended', () => {
+          console.warn(`Track ended: ${track.kind}, readyState: ${track.readyState}`);
+          if (isMountedRef.current && streamRef.current === stream) {
+            toast({
+              title: 'Camera Disconnected',
+              description: 'Camera stream ended unexpectedly.',
+              variant: 'destructive',
+            });
+            setIsActive(false);
+          }
+        });
+      });
+
+      isStartingRef.current = false;
 
       toast({
         title: 'Camera started',
@@ -214,9 +471,21 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       });
     } catch (error) {
       console.error('Camera error:', error);
+      isStartingRef.current = false;
+      
+      // Clean up stream on error
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      
+      const errorMessage = error instanceof Error ? error.message : 'Please allow camera permissions to use this feature.';
       toast({
         title: 'Camera access denied',
-        description: 'Please allow camera permissions to use this feature.',
+        description: errorMessage,
         variant: 'destructive',
       });
       setIsActive(false);
@@ -225,18 +494,51 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
 
   // Stop camera function
   const stopCamera = useCallback(() => {
+    console.log('Stopping camera...');
+    isStartingRef.current = false;
+    
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log(`Stopped ${track.kind} track`);
+      });
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.pause();
     }
     if (analysisIntervalRef.current !== null) {
       window.clearInterval(analysisIntervalRef.current);
       analysisIntervalRef.current = null;
     }
+    console.log('Camera stopped');
   }, []);
+
+  const applyManualEmotion = useCallback((emotionKey: keyof typeof BASE_EMOTION_THEMES) => {
+    const theme = BASE_EMOTION_THEMES[emotionKey];
+    setManualMode(true);
+    setManualEmotion(emotionKey);
+    setActiveTheme(theme);
+    setEmotion(emotionKey);
+  }, []);
+
+  const deactivateManualTester = useCallback(() => {
+    setManualMode(false);
+    setManualEmotion(null);
+    setActiveTheme(DEFAULT_THEME);
+    setEmotion('neutral');
+  }, []);
+
+  const toggleManualTester = useCallback(() => {
+    if (manualMode) {
+      deactivateManualTester();
+      return;
+    }
+
+    const initialEmotion = manualEmotion ?? DEFAULT_MANUAL_EMOTION;
+    applyManualEmotion(initialEmotion);
+  }, [manualMode, manualEmotion, deactivateManualTester, applyManualEmotion]);
 
   // Analyze emotions function with proper checks
   const startEmotionDetection = useCallback(() => {
@@ -250,7 +552,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
     }
 
     analysisIntervalRef.current = window.setInterval(async () => {
-      if (!videoRef.current || !canvasRef.current || !isMounted || !isActive) {
+      if (!videoRef.current || !canvasRef.current || !isMountedRef.current || !isActive) {
         return;
       }
 
@@ -266,7 +568,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
 
       const result = await detectFacialEmotion(video);
       
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
 
       if (result) {
         const normalizedEmotion = result.emotion.toLowerCase();
@@ -292,8 +594,12 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
         description: 'Emotion analysis has been disabled.',
       });
     } else {
+      // Set active state first, then start camera
       setIsActive(true);
+      // Small delay to ensure state is set
+      await new Promise(resolve => setTimeout(resolve, 10));
       await startCamera();
+      // If startCamera fails, it will set isActive to false
     }
   }, [isActive, startCamera, stopCamera, toast]);
 
@@ -360,7 +666,7 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       });
     };
 
-    if (isActive) {
+    if (manualMode || isActive) {
       body.classList.add('emotion-bg-active');
       applyTheme(activeTheme);
     } else {
@@ -372,15 +678,32 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
       body.classList.remove('emotion-bg-active');
       resetTheme();
     };
-  }, [activeTheme, isActive]);
+  }, [activeTheme, isActive, manualMode]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - only run once when component actually unmounts
   useEffect(() => {
     return () => {
-      stopCamera();
+      console.log('Component unmounting, cleaning up...', {
+        hasStream: !!streamRef.current,
+        activeTracks: streamRef.current?.getTracks().filter(t => t.readyState === 'live').length || 0,
+      });
+      isMountedRef.current = false;
+      setIsMounted(false);
+      
+      // Only stop camera if we actually have a stream
+      // This prevents stopping during React StrictMode double-mount in development
+      if (streamRef.current) {
+        const activeTracks = streamRef.current.getTracks().filter(t => t.readyState === 'live');
+        if (activeTracks.length > 0) {
+          console.log('Stopping camera on unmount');
+          stopCamera();
+        }
+      }
+      
       cancelSpeech();
     };
-  }, [stopCamera, cancelSpeech]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run on mount/unmount
 
   return (
     <div className="relative">
@@ -403,15 +726,68 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
               autoPlay
               playsInline
               muted
+              preload="auto"
+              style={{ minWidth: '100%', minHeight: '100%' }}
               aria-label="Live camera feed for emotion detection"
+              onLoadedMetadata={() => {
+                console.log('Video metadata loaded in onLoadedMetadata handler', {
+                  videoWidth: videoRef.current?.videoWidth,
+                  videoHeight: videoRef.current?.videoHeight,
+                  readyState: videoRef.current?.readyState,
+                });
+                // Ensure video plays when metadata is loaded
+                if (videoRef.current && streamRef.current && isActive) {
+                  videoRef.current.play().catch(err => {
+                    console.warn('Video autoplay failed in handler:', err);
+                  });
+                }
+              }}
+              onCanPlay={() => {
+                console.log('Video can play in onCanPlay handler');
+                if (videoRef.current && streamRef.current && isActive) {
+                  videoRef.current.play().catch(err => {
+                    console.warn('Video play failed in canplay handler:', err);
+                  });
+                }
+              }}
+              onPlay={() => {
+                console.log('Video started playing', {
+                  paused: videoRef.current?.paused,
+                  ended: videoRef.current?.ended,
+                  videoWidth: videoRef.current?.videoWidth,
+                  videoHeight: videoRef.current?.videoHeight,
+                });
+              }}
+              onPause={() => {
+                console.log('Video paused', {
+                  paused: videoRef.current?.paused,
+                  ended: videoRef.current?.ended,
+                });
+              }}
+              onError={(e) => {
+                console.error('Video element error:', e, {
+                  error: videoRef.current?.error,
+                  networkState: videoRef.current?.networkState,
+                  readyState: videoRef.current?.readyState,
+                });
+              }}
             />
             <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
             
             {!isActive && (
-              <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
                 <p className="text-muted-foreground" role="status">
                   Camera is off
                 </p>
+              </div>
+            )}
+            
+            {isActive && streamRef.current && (
+              <div className="absolute top-2 right-2 z-10">
+                <Badge variant="secondary" className="bg-green-500/80">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-1" />
+                  Live
+                </Badge>
               </div>
             )}
           </div>
@@ -470,7 +846,45 @@ export const CameraEmotionAnalyzer = ({ onEmotionChange }: CameraEmotionAnalyzer
             <p id="speech-toggle-description" className="sr-only">
               Enable or disable voice feedback for emotions
             </p>
+
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant={manualMode ? 'secondary' : 'outline'}
+                onClick={toggleManualTester}
+                className="w-full"
+              >
+                {manualMode ? 'Disable Emotion Tester' : 'Enable Emotion Tester'}
+              </Button>
+            </div>
           </div>
+ 
+          {manualMode && (
+            <div className="space-y-3 rounded-lg border border-primary/40 bg-background/80 p-4 shadow-inner backdrop-blur">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Emotion Tester</h4>
+                  <p className="text-xs text-muted-foreground">Pick an emotion to preview the animated theme.</p>
+                </div>
+                <Button type="button" size="sm" variant="ghost" onClick={deactivateManualTester}>
+                  Exit tester
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {MANUAL_TESTER_OPTIONS.map(option => (
+                  <Button
+                    key={option.key}
+                    type="button"
+                    variant={manualEmotion === option.key ? 'default' : 'outline'}
+                    onClick={() => applyManualEmotion(option.key)}
+                    className="px-3"
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Action Button */}
           <Button
