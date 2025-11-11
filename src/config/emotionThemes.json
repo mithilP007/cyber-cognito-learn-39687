@@ -1,0 +1,100 @@
+{
+  "defaultTheme": {
+    "background": "#0F131A",
+    "foreground": "#E5FFFF",
+    "primary": "#00E1FF",
+    "primaryForeground": "#0F131A",
+    "border": "#00E1FF",
+    "ring": "#00E1FF",
+    "emotionColor": "#52E081"
+  },
+  "emotions": {
+    "sad": {
+      "background": "#192743",
+      "foreground": "#DAF0FB",
+      "primary": "#4273D7",
+      "primaryForeground": "#F5FAFF",
+      "border": "#345EB2",
+      "ring": "#4C80E6",
+      "emotionColor": "#4C80E6"
+    },
+    "happy": {
+      "background": "#FFF5C2",
+      "foreground": "#392613",
+      "primary": "#FFD11A",
+      "primaryForeground": "#0F131A",
+      "border": "#FFDB4D",
+      "ring": "#FFD11A",
+      "emotionColor": "#FFD11A"
+    },
+    "neutral": {
+      "background": "#131720",
+      "foreground": "#D9F2F2",
+      "primary": "#00E1FF",
+      "primaryForeground": "#0F131A",
+      "border": "#47536B",
+      "ring": "#00E1FF",
+      "emotionColor": "#00E1FF"
+    },
+    "focus": {
+      "background": "#16293B",
+      "foreground": "#DEEDE8",
+      "primary": "#22C38E",
+      "primaryForeground": "#0F131A",
+      "border": "#29A37A",
+      "ring": "#22C38E",
+      "emotionColor": "#22C38E"
+    },
+    "anxious": {
+      "background": "#311E3E",
+      "foreground": "#EFDCF9",
+      "primary": "#A73CDD",
+      "primaryForeground": "#0F131A",
+      "border": "#8834B2",
+      "ring": "#A73CDD",
+      "emotionColor": "#A73CDD"
+    },
+    "angry": {
+      "background": "#4C1510",
+      "foreground": "#FCF1E8",
+      "primary": "#E84030",
+      "primaryForeground": "#F5FAFF",
+      "border": "#C33022",
+      "ring": "#E84030",
+      "emotionColor": "#E84030"
+    },
+    "surprised": {
+      "background": "#FFD9B3",
+      "foreground": "#492812",
+      "primary": "#FF8C1A",
+      "primaryForeground": "#0F131A",
+      "border": "#E68019",
+      "ring": "#FF8C1A",
+      "emotionColor": "#FF8C1A"
+    },
+    "disgusted": {
+      "background": "#2B4C24",
+      "foreground": "#E2F0DB",
+      "primary": "#49B234",
+      "primaryForeground": "#0F131A",
+      "border": "#4B8F3D",
+      "ring": "#49B234",
+      "emotionColor": "#49B234"
+    },
+    "fearful": {
+      "background": "#281C40",
+      "foreground": "#E7DEF7",
+      "primary": "#713CDD",
+      "primaryForeground": "#0F131A",
+      "border": "#5E34B2",
+      "ring": "#713CDD",
+      "emotionColor": "#713CDD"
+    }
+  },
+  "aliases": {
+    "depression": "sad",
+    "depressed": "sad",
+    "focused": "focus",
+    "anxiety": "anxious"
+  }
+}

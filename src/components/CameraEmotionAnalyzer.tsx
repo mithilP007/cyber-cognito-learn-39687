@@ -8,6 +8,7 @@ import { useEmotionDetection } from '@/hooks/useEmotionDetection';
 import { useEmotionSpeech } from '@/hooks/useEmotionSpeech';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import emotionThemeConfigJson from '@/config/emotionThemes.json';
 
 interface CameraEmotionAnalyzerProps {
   onEmotionChange?: (emotion: string, engagement: number, attention: number) => void;
@@ -39,7 +40,125 @@ type EmotionTheme = {
   emotionColor: string;
 };
 
-const DEFAULT_THEME: EmotionTheme = {
+type EmotionThemeOverrides = Partial<EmotionTheme>;
+type EmotionThemeOverridesInput = EmotionThemeOverrides | string;
+
+type BaseEmotionKey =
+  | 'sad'
+  | 'happy'
+  | 'neutral'
+  | 'focus'
+  | 'anxious'
+  | 'angry'
+  | 'surprised'
+  | 'disgusted'
+  | 'fearful';
+
+type EmotionThemeConfig = {
+  defaultTheme?: EmotionThemeOverridesInput;
+  emotions?: Partial<Record<BaseEmotionKey, EmotionThemeOverridesInput>>;
+  aliases?: Record<string, BaseEmotionKey>;
+};
+
+const emotionThemeConfig = emotionThemeConfigJson as EmotionThemeConfig;
+const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+
+const hexToHslTriplet = (hex: string): string | null => {
+  if (!HEX_COLOR_REGEX.test(hex)) return null;
+
+  const normalized =
+    hex.length === 4
+      ? `#${hex
+          .slice(1)
+          .split('')
+          .map(char => char + char)
+          .join('')}`
+      : hex.toUpperCase();
+
+  const r = parseInt(normalized.slice(1, 3), 16) / 255;
+  const g = parseInt(normalized.slice(3, 5), 16) / 255;
+  const b = parseInt(normalized.slice(5, 7), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const delta = max - min;
+    s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+
+    switch (max) {
+      case r:
+        h = (g - b) / delta + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / delta + 2;
+        break;
+      case b:
+        h = (r - g) / delta + 4;
+        break;
+      default:
+        break;
+    }
+
+    h *= 60;
+  }
+
+  const hue = Math.round((h + 360) % 360);
+  const saturation = Math.round(s * 100);
+  const lightness = Math.round(l * 100);
+
+  return `${hue} ${saturation}% ${lightness}%`;
+};
+
+const stripHslWrapper = (value: string): string => {
+  const trimmed = value.trim();
+  if (trimmed.toLowerCase().startsWith('hsl(') && trimmed.endsWith(')')) {
+    return trimmed.slice(4, -1).trim();
+  }
+  return trimmed;
+};
+
+const normalizeColorValue = (value: string | undefined, fallback: string): string => {
+  if (!value?.trim()) {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+
+  if (HEX_COLOR_REGEX.test(trimmed)) {
+    const converted = hexToHslTriplet(trimmed);
+    return converted ?? fallback;
+  }
+
+  if (/^hsl\(/i.test(trimmed)) {
+    return stripHslWrapper(trimmed);
+  }
+
+  return trimmed;
+};
+
+const resolveThemeOverrides = (
+  input?: EmotionThemeOverridesInput,
+): EmotionThemeOverrides | undefined => {
+  if (!input) return undefined;
+
+  if (typeof input === 'string') {
+    const accent = input;
+    return {
+      primary: accent,
+      border: accent,
+      ring: accent,
+      emotionColor: accent,
+    };
+  }
+
+  return input;
+};
+
+const DEFAULT_THEME_BASE: EmotionTheme = {
   background: '220 25% 8%',
   foreground: '180 100% 95%',
   primary: '187 100% 50%',
@@ -49,109 +168,54 @@ const DEFAULT_THEME: EmotionTheme = {
   emotionColor: '140 70% 60%',
 };
 
-const createTheme = (overrides: Partial<EmotionTheme>): EmotionTheme => ({
-  ...DEFAULT_THEME,
-  ...overrides,
-});
+const defaultThemeOverrides = resolveThemeOverrides(emotionThemeConfig.defaultTheme);
+
+const buildTheme = (overridesInput?: EmotionThemeOverridesInput): EmotionTheme => {
+  const overrides = resolveThemeOverrides(overridesInput);
+  const merged = {
+    ...DEFAULT_THEME_BASE,
+    ...(defaultThemeOverrides ?? {}),
+    ...(overrides ?? {}),
+  };
+
+  return {
+    background: normalizeColorValue(merged.background, DEFAULT_THEME_BASE.background),
+    foreground: normalizeColorValue(merged.foreground, DEFAULT_THEME_BASE.foreground),
+    primary: normalizeColorValue(merged.primary, DEFAULT_THEME_BASE.primary),
+    primaryForeground: normalizeColorValue(
+      merged.primaryForeground,
+      DEFAULT_THEME_BASE.primaryForeground,
+    ),
+    border: normalizeColorValue(merged.border, DEFAULT_THEME_BASE.border),
+    ring: normalizeColorValue(merged.ring, DEFAULT_THEME_BASE.ring),
+    emotionColor: normalizeColorValue(merged.emotionColor, DEFAULT_THEME_BASE.emotionColor),
+  };
+};
+
+const DEFAULT_THEME: EmotionTheme = buildTheme();
+
+const emotionThemeOverrides = emotionThemeConfig.emotions ?? {};
 
 const BASE_EMOTION_THEMES = {
-  sad: createTheme({
-    background: '220 45% 18%',
-    foreground: '200 80% 92%',
-    primary: '220 65% 55%',
-    primaryForeground: '210 100% 98%',
-    border: '220 55% 45%',
-    ring: '220 75% 60%',
-    emotionColor: '220 75% 60%',
-  }),
-  happy: createTheme({
-    background: '220 25% 10%',
-    foreground: '180 50% 90%',
-    primary: '187 100% 50%',
-    primaryForeground: '220 25% 8%',
-    border: '220 20% 35%',
-    ring: '187 100% 50%',
-    emotionColor: '187 100% 50%',
-  }),
-  neutral: createTheme({
-    background: '50 100% 88%',
-    foreground: '30 50% 15%',
-    primary: '48 100% 55%',
-    primaryForeground: '220 25% 8%',
-    border: '48 100% 65%',
-    ring: '48 100% 55%',
-    emotionColor: '48 100% 55%',
-  }),
-  focus: createTheme({
-    background: '210 45% 16%',
-    foreground: '160 30% 90%',
-    primary: '160 70% 45%',
-    primaryForeground: '220 25% 8%',
-    border: '160 60% 40%',
-    ring: '160 70% 45%',
-    emotionColor: '160 70% 45%',
-  }),
-  anxious: createTheme({
-    background: '275 35% 18%',
-    foreground: '280 70% 92%',
-    primary: '280 70% 55%',
-    primaryForeground: '220 25% 8%',
-    border: '280 55% 45%',
-    ring: '280 70% 55%',
-    emotionColor: '280 70% 55%',
-  }),
-  angry: createTheme({
-    background: '5 65% 18%',
-    foreground: '25 80% 95%',
-    primary: '5 80% 55%',
-    primaryForeground: '210 100% 98%',
-    border: '5 70% 45%',
-    ring: '5 80% 55%',
-    emotionColor: '5 80% 55%',
-  }),
-  surprised: createTheme({
-    background: '30 100% 85%',
-    foreground: '24 60% 18%',
-    primary: '30 100% 55%',
-    primaryForeground: '220 25% 8%',
-    border: '30 80% 50%',
-    ring: '30 100% 55%',
-    emotionColor: '30 100% 55%',
-  }),
-  disgusted: createTheme({
-    background: '110 35% 22%',
-    foreground: '100 40% 90%',
-    primary: '110 55% 45%',
-    primaryForeground: '220 25% 8%',
-    border: '110 40% 40%',
-    ring: '110 55% 45%',
-    emotionColor: '110 55% 45%',
-  }),
-  fearful: createTheme({
-    background: '260 40% 18%',
-    foreground: '260 60% 92%',
-    primary: '260 70% 55%',
-    primaryForeground: '220 25% 8%',
-    border: '260 55% 45%',
-    ring: '260 70% 55%',
-    emotionColor: '260 70% 55%',
-  }),
-} as const satisfies Record<string, EmotionTheme>;
+  sad: buildTheme(emotionThemeOverrides.sad),
+  happy: buildTheme(emotionThemeOverrides.happy),
+  neutral: buildTheme(emotionThemeOverrides.neutral),
+  focus: buildTheme(emotionThemeOverrides.focus),
+  anxious: buildTheme(emotionThemeOverrides.anxious),
+  angry: buildTheme(emotionThemeOverrides.angry),
+  surprised: buildTheme(emotionThemeOverrides.surprised),
+  disgusted: buildTheme(emotionThemeOverrides.disgusted),
+  fearful: buildTheme(emotionThemeOverrides.fearful),
+} satisfies Record<BaseEmotionKey, EmotionTheme>;
 
 const EMOTION_THEME_ALIASES: Record<string, EmotionTheme> = {
-  sad: BASE_EMOTION_THEMES.sad,
-  depression: BASE_EMOTION_THEMES.sad,
-  depressed: BASE_EMOTION_THEMES.sad,
-  happy: BASE_EMOTION_THEMES.happy,
-  neutral: BASE_EMOTION_THEMES.neutral,
-  focus: BASE_EMOTION_THEMES.focus,
-  focused: BASE_EMOTION_THEMES.focus,
-  anxious: BASE_EMOTION_THEMES.anxious,
-  anxiety: BASE_EMOTION_THEMES.anxious,
-  angry: BASE_EMOTION_THEMES.angry,
-  surprised: BASE_EMOTION_THEMES.surprised,
-  disgusted: BASE_EMOTION_THEMES.disgusted,
-  fearful: BASE_EMOTION_THEMES.fearful,
+  ...BASE_EMOTION_THEMES,
+  ...Object.fromEntries(
+    Object.entries(emotionThemeConfig.aliases ?? {}).map(([alias, target]) => [
+      alias,
+      BASE_EMOTION_THEMES[target as BaseEmotionKey] ?? DEFAULT_THEME,
+    ]),
+  ),
 };
 
 const DEFAULT_MANUAL_EMOTION: keyof typeof BASE_EMOTION_THEMES = 'neutral';
