@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: [
       'face-api.js',
-      '@vladmandic/face-api',
       '@huggingface/transformers'
     ],
     exclude: [],
@@ -26,7 +25,7 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          'face-api': ['face-api.js', '@vladmandic/face-api'],
+          'face-api': ['face-api.js'],
           'transformers': ['@huggingface/transformers'],
         },
       },
